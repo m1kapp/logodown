@@ -625,12 +625,12 @@ function DiceIcon({ size = 16 }: { size?: number }) {
 }
 
 // Row-major 2-row grid with horizontal scroll: fills row 1 fully, then row 2.
-function gridStyle(itemCount: number): React.CSSProperties {
+function gridStyle(itemCount: number, cellSize = "3rem"): React.CSSProperties {
   const cols = Math.max(1, Math.ceil(itemCount / 2));
   return {
     display: "grid",
-    gridTemplateColumns: `repeat(${cols}, 2.75rem)`,
-    gridTemplateRows: "repeat(2, 2.75rem)",
+    gridTemplateColumns: `repeat(${cols}, ${cellSize})`,
+    gridTemplateRows: `repeat(2, ${cellSize})`,
     gap: "0.375rem",
   };
 }
@@ -1011,10 +1011,10 @@ export default function App() {
   };
 
   const cellCls = (active: boolean) =>
-    `w-11 h-11 flex items-center justify-center rounded-xl font-bold text-sm cursor-pointer transition-all select-none shrink-0 ${
+    `w-12 h-12 flex items-center justify-center rounded-xl font-bold text-[15px] cursor-pointer transition-all select-none shrink-0 ${
       active
-        ? "bg-zinc-900 text-white shadow-sm ring-2 ring-zinc-900/20"
-        : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+        ? "bg-zinc-900 text-white shadow-sm"
+        : "bg-white text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
     }`;
 
   return (
@@ -1036,208 +1036,199 @@ export default function App() {
             <HomeView onStart={() => setView("create")} />
           ) : (
           <>
-          {/* Preview */}
-          <Section className="pt-4 pb-2">
-            <div className="relative flex justify-center">
-              <LogoInline svgStr={logoSvgStr} displaySize={140} className="shadow-2xl transition-all duration-200 overflow-hidden" style={{ borderRadius: `${rPx(140)}px` }} />
+          {/* Preview — canvas feel */}
+          <Section className="pt-3 pb-0">
+            <div className="relative rounded-2xl bg-[repeating-conic-gradient(#f4f4f5_0%_25%,#fafafa_0%_50%)] bg-[length:16px_16px] flex flex-col items-center justify-center py-8 mb-3">
+              <LogoInline svgStr={logoSvgStr} displaySize={160} className="shadow-2xl transition-all duration-300 overflow-hidden" style={{ borderRadius: `${rPx(160)}px` }} />
+              {/* context previews */}
+              <div className="flex items-center gap-4 mt-5">
+                {/* tab bar mock */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/80 shadow-sm backdrop-blur-sm">
+                  <LogoInline svgStr={logoSvgStr} displaySize={14} className="overflow-hidden" style={{ borderRadius: `${rPx(14)}px` }} />
+                  <span className="text-[10px] font-semibold text-zinc-500">{wordmarkLabel}</span>
+                </div>
+                {/* app icon mock */}
+                <LogoInline svgStr={logoSvgStr} displaySize={48} className="shadow-md overflow-hidden" style={{ borderRadius: `${rPx(48)}px` }} />
+                {/* larger icon */}
+                <LogoInline svgStr={logoSvgStr} displaySize={36} className="shadow-sm overflow-hidden" style={{ borderRadius: `${rPx(36)}px` }} />
+              </div>
+            </div>
+            {/* Action bar */}
+            <div className="flex items-center gap-2 mb-2">
               <button
                 onClick={handleRandom}
-                className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-2xl bg-zinc-900 text-white hover:opacity-80 transition-opacity cursor-pointer"
-                title="전체 랜덤"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer"
               >
-                <DiceIcon size={20} />
-                <span className="text-[11px] font-black">랜덤</span>
+                <DiceIcon size={14} />
+                <span className="text-[12px] font-semibold">전체 랜덤</span>
+              </button>
+              <button
+                onClick={handleRandomActiveSlot}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer"
+              >
+                <DiceIcon size={14} />
+                <span className="text-[12px] font-semibold">{activeSlot === "front" ? "앞" : "뒤"} 슬롯만</span>
+              </button>
+              <button
+                onClick={handleRandomColor}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer"
+              >
+                <DiceIcon size={14} />
+                <span className="text-[12px] font-semibold">색상만</span>
               </button>
             </div>
           </Section>
 
-          <div className="mx-4 my-4 h-px bg-zinc-100" />
-
-          {/* Slot picker — front/back tabs + mode pills + grid */}
+          {/* Slot picker — card */}
           <Section>
-            <PickerHeader
-              label="슬롯"
-              right={
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleRandomActiveSlot}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 cursor-pointer transition-colors"
-                    title={`${activeSlot === "front" ? "앞" : "뒤"} 슬롯만 랜덤`}
-                  >
-                    <DiceIcon size={14} />
-                  </button>
-                  <SegmentControl
-                    options={[{ id: "front" as const, label: "앞" }, { id: "back" as const, label: "뒤" }]}
-                    value={activeSlot}
-                    onChange={setActiveSlot}
-                  />
-                </div>
-              }
-            />
-            <div className="flex items-center justify-between mb-3">
-              <SegmentControl
-                options={MODE_OPTIONS}
-                value={pickerMode}
-                onChange={setPickerMode}
-              />
-              <span className="text-[11px] text-zinc-400 font-medium tabular-nums">
-                {pickerMode === "symbol"
-                  ? LOGO_SYMBOLS.filter((s) => s.id !== "none").length
-                  : charsForMode(pickerMode).length}
-              </span>
-            </div>
-            {pickerMode === "symbol" ? (() => {
-              const symbols = LOGO_SYMBOLS.filter((s) => s.id !== "none");
-              return (
-                <div className="overflow-x-auto pb-1 scrollbar-hide">
-                  <div style={gridStyle(symbols.length)}>
-                    {symbols.map((s) => {
-                      const isActive = activeValue.kind === "symbol" && activeValue.value === s.id;
-                      return (
-                        <Tooltip key={s.id} label={s.id}>
-                          <button onClick={() => pickFromGrid("symbol", s.id)} className={cellCls(isActive)}>
-                            <SymbolIcon sym={s} size={18} />
+            <div className="rounded-2xl bg-zinc-50 p-3">
+              <div className="flex items-center justify-between mb-3">
+                <SegmentControl
+                  options={[{ id: "front" as const, label: "앞 슬롯" }, { id: "back" as const, label: "뒤 슬롯" }]}
+                  value={activeSlot}
+                  onChange={setActiveSlot}
+                />
+              </div>
+              <div className="flex items-center justify-between mb-3">
+                <SegmentControl
+                  options={MODE_OPTIONS}
+                  value={pickerMode}
+                  onChange={setPickerMode}
+                />
+                <span className="text-[11px] text-zinc-400 font-medium tabular-nums">
+                  {pickerMode === "symbol"
+                    ? LOGO_SYMBOLS.filter((s) => s.id !== "none").length
+                    : charsForMode(pickerMode).length}
+                </span>
+              </div>
+              {pickerMode === "symbol" ? (() => {
+                const symbols = LOGO_SYMBOLS.filter((s) => s.id !== "none");
+                return (
+                  <div className="overflow-x-auto pb-1 scrollbar-hide">
+                    <div style={gridStyle(symbols.length)}>
+                      {symbols.map((s) => {
+                        const isActive = activeValue.kind === "symbol" && activeValue.value === s.id;
+                        return (
+                          <Tooltip key={s.id} label={s.id}>
+                            <button onClick={() => pickFromGrid("symbol", s.id)} className={cellCls(isActive)}>
+                              <SymbolIcon sym={s} size={20} />
+                            </button>
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })() : (() => {
+                const chars = charsForMode(pickerMode);
+                const cellFont: React.CSSProperties =
+                  pickerMode === "lower"
+                    ? { fontFamily: "Pacifico, cursive", fontWeight: 400, fontSize: "1.15rem" }
+                    : pickerMode === "hangul"
+                      ? { fontFamily: "'Pretendard Variable', 'Pretendard', system-ui, sans-serif", fontWeight: 900 }
+                      : {};
+                return (
+                  <div className="overflow-x-auto pb-1 scrollbar-hide">
+                    <div style={gridStyle(chars.length)}>
+                      {chars.map((l) => {
+                        const isActive = activeValue.kind === "char" && activeValue.value === l;
+                        return (
+                          <button
+                            key={l}
+                            onClick={() => pickFromGrid("char", l)}
+                            className={cellCls(isActive)}
+                            style={cellFont}
+                          >
+                            {l}
                           </button>
-                        </Tooltip>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })() : (() => {
-              const chars = charsForMode(pickerMode);
-              // Apply the same font as the logo render so the picker previews
-              // each glyph in its actual typeface.
-              const cellFont: React.CSSProperties =
-                pickerMode === "lower"
-                  ? { fontFamily: "Pacifico, cursive", fontWeight: 400, fontSize: "1.1rem" }
-                  : pickerMode === "hangul"
-                    ? { fontFamily: "'Pretendard Variable', 'Pretendard', system-ui, sans-serif", fontWeight: 900 }
-                    : {};
-              return (
-                <div className="overflow-x-auto pb-1 scrollbar-hide">
-                  <div style={gridStyle(chars.length)}>
-                    {chars.map((l) => {
-                      const isActive = activeValue.kind === "char" && activeValue.value === l;
-                      return (
-                        <button
-                          key={l}
-                          onClick={() => pickFromGrid("char", l)}
-                          className={cellCls(isActive)}
-                          style={cellFont}
-                        >
-                          {l}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
+            </div>
           </Section>
 
-          <div className="mx-4 my-4 h-px bg-zinc-100" />
-
-          {/* Color */}
+          {/* Color — card */}
           <Section>
-            <PickerHeader
-              label="색상"
-              right={
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleRandomColor}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 cursor-pointer transition-colors"
-                    title="색상 랜덤"
-                  >
-                    <DiceIcon size={14} />
-                  </button>
-                  <SegmentControl
-                    options={[
-                      { id: "solid" as const,    label: "단색"       },
-                      { id: "gradient" as const, label: "그라데이션" },
-                    ]}
-                    value={colorMode}
-                    onChange={setColorMode}
-                  />
+            <div className="rounded-2xl bg-zinc-50 p-3">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[12px] font-bold text-zinc-900 tracking-tight">색상</span>
+                <SegmentControl
+                  options={[
+                    { id: "solid" as const,    label: "단색"       },
+                    { id: "gradient" as const, label: "그라데이션" },
+                  ]}
+                  value={colorMode}
+                  onChange={setColorMode}
+                />
+              </div>
+              <div className="overflow-x-auto pb-1 scrollbar-hide">
+                <div style={gridStyle(LOGO_COLORS.length + 1)}>
+                  {LOGO_COLORS.map(({ name, hex }) => {
+                    const swatchBg = colorMode === "gradient"
+                      ? `linear-gradient(135deg, ${hex}, ${autoGradientEnd(hex)})`
+                      : undefined;
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => setColor(hex)}
+                        className={`relative w-12 h-12 rounded-xl cursor-pointer transition-all flex items-center justify-center ${color === hex ? "ring-2 ring-offset-2 ring-zinc-900/30 scale-95" : "hover:scale-95"}`}
+                        style={swatchBg ? { background: swatchBg } : { backgroundColor: hex }}
+                        title={name}
+                      >
+                        {color === hex && (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isLightHex(hex) ? "#09090b" : "#ffffff"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                  <label className="w-12 h-12 rounded-xl cursor-pointer flex items-center justify-center bg-white hover:bg-zinc-100 transition-colors relative overflow-hidden border border-dashed border-zinc-300">
+                    <span className="text-zinc-400 text-lg font-bold">+</span>
+                    <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                  </label>
                 </div>
-              }
-            />
-            <div className="overflow-x-auto pb-1 scrollbar-hide">
-              <div style={gridStyle(LOGO_COLORS.length + 1)}>
-                {LOGO_COLORS.map(({ name, hex }) => {
-                  const swatchBg = colorMode === "gradient"
-                    ? `linear-gradient(135deg, ${hex}, ${autoGradientEnd(hex)})`
-                    : undefined;
-                  return (
-                    <button
-                      key={name}
-                      onClick={() => setColor(hex)}
-                      className={`relative w-11 h-11 rounded-xl cursor-pointer transition-all flex items-center justify-center ${color === hex ? "ring-2 ring-offset-2 ring-zinc-900/30 scale-95" : "hover:scale-95"}`}
-                      style={swatchBg ? { background: swatchBg } : { backgroundColor: hex }}
-                      title={name}
-                    >
-                      {color === hex && (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isLightHex(hex) ? "#09090b" : "#ffffff"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
-                    </button>
-                  );
-                })}
-                <label className="w-11 h-11 rounded-xl cursor-pointer flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 transition-colors relative overflow-hidden">
-                  <span className="text-zinc-400 text-lg font-black">+</span>
-                  <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
-                </label>
               </div>
             </div>
           </Section>
 
-          <div className="mx-4 my-4 h-px bg-zinc-100" />
-
-          {/* Style */}
+          {/* Style — card */}
           <Section>
-            <PickerHeader label="스타일" />
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {STYLE_BASES.map((sb) => {
-                const sid = resolveStyleId(sb.id, colorMode);
-                const s = resolveStyle(sid, color);
-                const preview = buildLogoSvgStr(
-                  front, back, s.bg, LOGO_RADIUS, 200,
-                  s.bgGradEnd, s.textColor, s.textGradEnd,
-                );
-                const active = styleBase === sb.id;
-                const tileRadius = Math.round(44 * LOGO_RADIUS);
-                return (
-                  <button
-                    key={sb.id}
-                    onClick={() => setStyleBase(sb.id)}
-                    title={sb.label}
-                    className={`relative cursor-pointer transition-all shrink-0 overflow-hidden ${active ? "scale-90" : "hover:scale-95"}`}
-                    style={{ borderRadius: `${tileRadius}px` }}
-                  >
-                    <LogoInline
-                      svgStr={preview}
-                      displaySize={56}
-                      className="overflow-hidden block"
-                      style={{ borderRadius: `${Math.round(56 * LOGO_RADIUS)}px` }}
-                    />
-                    {active && (
-                      <span
-                        className="absolute inset-0 flex items-center justify-center"
-                        style={{ backgroundColor: "rgba(0,0,0,0.3)", borderRadius: `${Math.round(56 * LOGO_RADIUS)}px` }}
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+            <div className="rounded-2xl bg-zinc-50 p-3">
+              <span className="text-[12px] font-bold text-zinc-900 tracking-tight block mb-3">스타일</span>
+              <div className="flex gap-3">
+                {STYLE_BASES.map((sb) => {
+                  const sid = resolveStyleId(sb.id, colorMode);
+                  const s = resolveStyle(sid, color);
+                  const preview = buildLogoSvgStr(
+                    front, back, s.bg, LOGO_RADIUS, 200,
+                    s.bgGradEnd, s.textColor, s.textGradEnd,
+                  );
+                  const active = styleBase === sb.id;
+                  return (
+                    <button
+                      key={sb.id}
+                      onClick={() => setStyleBase(sb.id)}
+                      className={`flex flex-col items-center gap-1.5 cursor-pointer transition-all ${active ? "" : "opacity-50 hover:opacity-80"}`}
+                    >
+                      <div className={`relative overflow-hidden transition-all ${active ? "ring-2 ring-zinc-900 ring-offset-2" : ""}`} style={{ borderRadius: `${Math.round(72 * LOGO_RADIUS)}px` }}>
+                        <LogoInline
+                          svgStr={preview}
+                          displaySize={72}
+                          className="overflow-hidden block"
+                          style={{ borderRadius: `${Math.round(72 * LOGO_RADIUS)}px` }}
+                        />
+                      </div>
+                      <span className={`text-[11px] font-semibold ${active ? "text-zinc-900" : "text-zinc-400"}`}>{sb.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </Section>
-
-          <div className="mx-4 my-4 h-px bg-zinc-100" />
 
           {/* Download */}
           <Section>
