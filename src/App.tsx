@@ -1,16 +1,22 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  Watermark,
   AppShell, AppShellHeader, AppShellContent,
-  Section, Divider, colors,
-  ThemeButton, ThemeDialog,
-  Tooltip,
+  TabBar, Tab,
+  Section, SectionHeader,
+  Tooltip, Badge, Button, ShareButton,
+  useToast,
 } from "@m1kapp/kit";
+import { LUCIDE_SYMBOLS } from "./symbols/lucide";
+import { CUSTOM_SYMBOLS } from "./symbols/custom";
+import { loadExportFonts, type LoadedFonts } from "./fonts";
+import { buildSeoPack, type SeoPackCategory } from "./seo-pack";
 
 /* ══════════════════════════════════════════════
    Symbols
 ══════════════════════════════════════════════ */
 const ARROW_D = "M30 5 L70 5 L70 52 L95 52 L50 95 L5 52 L30 52 Z";
-const LOGO_SYMBOLS: Array<{ id: string; label: string; d?: string; vb?: number; isRing?: boolean; fillRule?: string; rotate?: number }> = [
+const LOGO_SYMBOLS: Array<{ id: string; label: string; d?: string | string[]; vb?: number; isRing?: boolean; fillRule?: string; rotate?: number; stroke?: boolean; strokeWidth?: number }> = [
   { id: "none",       label: "—" },
   // ── 화살표 8방향
   { id: "down",       label: "↓",  vb: 100, d: ARROW_D },
@@ -46,7 +52,6 @@ const LOGO_SYMBOLS: Array<{ id: string; label: string; d?: string; vb?: number; 
   { id: "drawio",      label: "◇",   vb: 24, d: "M19.69 13.419h-2.527l-2.667-4.555a1.292 1.292 0 001.035-1.28V4.16c0-.725-.576-1.312-1.302-1.312H9.771c-.726 0-1.312.576-1.312 1.301v3.435c0 .619.426 1.152 1.034 1.28l-2.666 4.555H4.309c-.725 0-1.312.576-1.312 1.301v3.435c0 .725.576 1.312 1.302 1.312h4.458c.726 0 1.312-.576 1.312-1.302v-3.434c0-.726-.576-1.312-1.301-1.312h-.437l2.645-4.523h2.059l2.656 4.523h-.438c-.725 0-1.312.576-1.312 1.301v3.435c0 .725.576 1.312 1.302 1.312H19.7c.726 0 1.312-.576 1.312-1.302v-3.434c0-.726-.576-1.312-1.301-1.312z" },
   { id: "bars",        label: "▐",   vb: 24, d: "M6.399 12.8v4.8H19.2v1.6H4.799V0H0v24h24V12.8H6.399Zm4.801-8H6.399v6.4H11.2V4.8Zm6.4 0h-4.8v6.4h4.8V4.8ZM24 0h-4.8v11.2H24V0Z" },
   { id: "layers",      label: "◈",   vb: 24, d: "M10.501 11.724.631 7.16c-.841-.399-.841-1.014 0-1.376l9.87-4.563c.841-.399 2.194-.399 2.998 0l9.87 4.563c.841.398.841 1.014 0 1.376l-9.87 4.563c-.841.362-2.194.362-2.998 0zm0 5.468-9.87-4.563c-.841-.399-.841-1.014 0-1.376l3.363-1.558 6.507 3.006c.841.398 2.194.398 2.998 0l6.507-3.006 3.363 1.558c.841.398.841 1.014 0 1.376l-9.87 4.563c-.841.398-2.194.398-2.998 0zm0 5.613-9.87-4.563c-.841-.398-.841-1.014 0-1.376l3.436-1.593 6.398 2.97c.84.398 2.193.398 2.997 0l6.398-2.97 3.436 1.593c.841.399.841 1.014 0 1.376l-9.87 4.563c-.768.362-2.12.362-2.925 0z" },
-  { id: "codecrafters", label: "</>", vb: 24, d: "M1 12 L10 2 L17 2 L8 12 L17 22 L10 22 Z M7 22 L13 22 L17 2 L11 2 Z M23 12 L14 2 L7 2 L16 12 L7 22 L14 22 Z" },
   // ── 커스텀 (24×24)
   { id: "flow",   label: "flow",  vb: 24, d: "M0 24 L0 16 L8 16 L8 8 L16 8 L16 0 L24 0 L24 24Z" },
   { id: "wave2",  label: "wave2", vb: 24, d: "M0 5 C8 -1 16 11 24 5 L24 9 C16 15 8 3 0 9Z M0 14 C8 8 16 20 24 14 L24 18 C16 24 8 12 0 18Z" },
@@ -68,6 +73,10 @@ const LOGO_SYMBOLS: Array<{ id: string; label: string; d?: string; vb?: number; 
   { id: "meteor",  label: "meteor",  vb: 100, d: "M18 82 L50 22 C57 10 78 8 88 24 C98 40 85 62 66 66 L22 76 Z" },
   { id: "meteor2", label: "meteor2", vb: 100, d: "M19 50 L36 17 C40 10 52 9 57 18 C63 27 56 39 45 41 L21 46 Z M49 86 L66 53 C70 46 82 45 87 54 C93 63 86 75 75 77 L51 82 Z" },
   { id: "meteor3", label: "meteor3", vb: 100, d: "M24 40 L41 7 C45 0 57 -1 62 8 C68 17 61 29 50 31 L26 36 Z M34 68 L51 35 C55 28 67 27 72 36 C78 45 71 57 60 59 L36 64 Z M44 96 L61 63 C65 56 77 55 82 64 C88 73 81 85 70 87 L46 92 Z" },
+  // ── custom (fill-based) — loaded from src/symbols/custom/*.svg
+  ...CUSTOM_SYMBOLS,
+  // ── lucide (stroke-based, 24×24) — loaded from src/symbols/lucide/*.svg
+  ...LUCIDE_SYMBOLS,
 ];
 
 /* ══════════════════════════════════════════════
@@ -115,80 +124,269 @@ function autoGradientEnd(hex: string): string {
   return hslToHex((hh + 45) % 360, Math.min(s, 90), Math.max(l - 8, 25));
 }
 
-function buildLogoSvgStr(text: string, symbolId: string, bg: string, radius: number, size = 200, gradientEnd?: string): string {
-  const r = Math.round(size * radius);
-  const sym = LOGO_SYMBOLS.find((s) => s.id === symbolId);
-  const hasSymbol = !!sym && sym.id !== "none" && (sym.d || sym.isRing);
-  const tColor = "#ffffff";
-  const cy = size / 2;
+function isLightHex(hex: string): boolean {
+  const h = hex.replace("#", "").padEnd(6, "0");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  // YIQ perceived brightness (0–255)
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150;
+}
+
+type SlotKind = "char" | "symbol";
+type Slot = { kind: SlotKind; value: string };
+
+function isSlotFilled(s: Slot): boolean {
+  if (s.kind === "char") return !!s.value;
+  const sym = LOGO_SYMBOLS.find((x) => x.id === s.value);
+  return !!sym && s.value !== "none" && !!(sym.d || sym.isRing);
+}
+
+type TextRenderer = (text: string, cx: number, cy: number, E: number, fgFill: string) => string;
+
+/**
+ * Convert a text slot to a vector <path> using opentype.js — used at download
+ * time so the SVG renders identically without web-font availability.
+ */
+function makePathTextRenderer(fonts: LoadedFonts): TextRenderer {
+  return (text, cx, cy, E, fgFill) => {
+    const displayText = (text || "A").slice(0, 3);
+    const charCount = displayText.length;
+    const isAllLower = /^[a-z]+$/.test(displayText);
+    const hasHangul = /[가-힣]/.test(displayText);
+    const div1 = isAllLower ? 0.60 : hasHangul ? 0.92 : 0.72;
+    const fontSize = charCount === 1
+      ? E / div1
+      : charCount === 2
+        ? (isAllLower ? E * 1.20 : E)
+        : (isAllLower ? E * 0.94 : E * 0.78);
+    const font = isAllLower ? fonts.pacifico : fonts.pretendard;
+    // Render at origin to measure bounding box, then offset so visual center
+    // lands at (cx, cy) — matches text-anchor=middle + dominant-baseline=central
+    // and naturally fixes Pacifico's per-letter ascender quirks (no manual offset needed).
+    const measure = font.getPath(displayText, 0, 0, fontSize);
+    const bbox = measure.getBoundingBox();
+    const dx = cx - (bbox.x1 + bbox.x2) / 2;
+    const dy = cy - (bbox.y1 + bbox.y2) / 2;
+    const placed = font.getPath(displayText, dx, dy, fontSize);
+    const fillEsc = fgFill.replace(/"/g, "&quot;");
+    return `<path d="${placed.toPathData(2)}" fill="${fillEsc}"/>`;
+  };
+}
+
+function renderTextSlot(text: string, cx: number, cy: number, E: number, fgFill: string): string {
   const displayText = (text || "A").slice(0, 3);
-
-  const useGrad = !!gradientEnd;
-  const isAllLowerCheck = /^[a-z]+$/.test((text || "A").slice(0, 3));
-  const fontImport = isAllLowerCheck
-    ? `<style>@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');</style>`
-    : "";
-  const defsEl = useGrad
-    ? `<defs>${fontImport}<linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="${gradientEnd}"/></linearGradient></defs>`
-    : isAllLowerCheck ? `<defs>${fontImport}</defs>` : "";
-  const bgFill = useGrad ? "url(#lg)" : bg;
-  const borderColor = invertHex(bg);
-
-  const E = size * 0.30;
-  const gap = size * 0.06;
-  const groupW = hasSymbol ? E + gap + E : E;
-  const groupLeft = (size - groupW) / 2;
-
-  const textCx = groupLeft + E / 2;
   const charCount = displayText.length;
   const isAllLower = /^[a-z]+$/.test(displayText);
-  const div1 = isAllLower ? 0.60 : 0.72;
+  const hasHangul = /[가-힣]/.test(displayText);
+  const div1 = isAllLower ? 0.60 : hasHangul ? 0.92 : 0.72;
   const fontSize = charCount === 1
     ? E / div1
     : charCount === 2
       ? (isAllLower ? E * 1.20 : E)
       : (isAllLower ? E * 0.94 : E * 0.78);
-  const textY = isAllLower ? cy - fontSize * 0.18 : cy;
+  const lowerSingleYOffset = (ch: string) => {
+    if ("bdhkl".includes(ch)) return fontSize * 0.20;
+    if (ch === "t") return fontSize * 0.10;
+    if (ch === "i") return fontSize * 0.08;
+    if ("gjpqy".includes(ch)) return -fontSize * 0.20;
+    return 0;
+  };
+  const textY = isAllLower
+    ? cy - fontSize * 0.18 + (charCount === 1 ? lowerSingleYOffset(displayText) : 0)
+    : cy;
   const fontFamily = isAllLower
     ? "Pacifico,cursive"
-    : "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif";
+    : hasHangul
+      ? "'Pretendard Variable','Pretendard',system-ui,sans-serif"
+      : "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif";
   const fontWeight = isAllLower ? "400" : "900";
-  const textEl = `<text x="${textCx.toFixed(1)}" y="${textY.toFixed(1)}" font-family="${fontFamily}" font-size="${fontSize.toFixed(1)}" font-weight="${fontWeight}" fill="${tColor}" text-anchor="middle" dominant-baseline="central">${displayText}</text>`;
+  const isTwoDigit = charCount === 2 && /^\d+$/.test(displayText);
+  const letterSpacing = isTwoDigit ? -fontSize * 0.08 : 0;
+  const lsAttr = letterSpacing !== 0 ? ` letter-spacing="${letterSpacing.toFixed(2)}"` : "";
+  return `<text x="${cx.toFixed(1)}" y="${textY.toFixed(1)}" font-family="${fontFamily}" font-size="${fontSize.toFixed(1)}" font-weight="${fontWeight}"${lsAttr} fill="${fgFill}" text-anchor="middle" dominant-baseline="central">${displayText}</text>`;
+}
 
-  let symbolEl = "";
-  if (hasSymbol) {
-    const symCx = groupLeft + E + gap + E / 2;
-    const ringInner = gradientEnd ?? bg;
-    if (sym!.isRing) {
-      symbolEl = `<circle cx="${symCx.toFixed(1)}" cy="${cy}" r="${(E*0.50).toFixed(1)}" fill="${tColor}"/><circle cx="${symCx.toFixed(1)}" cy="${cy}" r="${(E*0.29).toFixed(1)}" fill="${ringInner}"/>`;
-    } else {
-      const vb = sym!.vb ?? 100;
-      const sc = E / vb;
-      const tx = symCx - (vb/2)*sc, ty = cy - (vb/2)*sc;
-      const fr = sym!.fillRule ? ` fill-rule="${sym!.fillRule}"` : "";
-      const rot = sym!.rotate != null ? ` transform="rotate(${sym!.rotate}, ${(vb/2)}, ${(vb/2)})"` : "";
-      symbolEl = `<g transform="translate(${tx.toFixed(1)},${ty.toFixed(1)}) scale(${sc.toFixed(4)})"><path d="${sym!.d}" fill="${tColor}"${fr}${rot}/></g>`;
-    }
+function renderSymbolSlot(symbolId: string, cx: number, cy: number, E: number, fgFill: string, ringInner: string): string {
+  const sym = LOGO_SYMBOLS.find((x) => x.id === symbolId);
+  if (!sym || symbolId === "none" || (!sym.d && !sym.isRing)) return "";
+  if (sym.isRing) {
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(E*0.50).toFixed(1)}" fill="${fgFill}"/><circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(E*0.29).toFixed(1)}" fill="${ringInner}"/>`;
   }
+  const vb = sym.vb ?? 100;
+  const sc = E / vb;
+  const tx = cx - (vb/2)*sc, ty = cy - (vb/2)*sc;
+  const fr = sym.fillRule ? ` fill-rule="${sym.fillRule}"` : "";
+  const rot = sym.rotate != null ? ` transform="rotate(${sym.rotate}, ${(vb/2)}, ${(vb/2)})"` : "";
+  const pathAttrs = sym.stroke
+    ? `fill="none" stroke="${fgFill}" stroke-width="${sym.strokeWidth ?? 2}" stroke-linecap="round" stroke-linejoin="round"`
+    : `fill="${fgFill}"${fr}`;
+  const dList = Array.isArray(sym.d) ? sym.d : [sym.d as string];
+  const paths = dList.map((d) => `<path d="${d}" ${pathAttrs}${rot}/>`).join("");
+  return `<g transform="translate(${tx.toFixed(1)},${ty.toFixed(1)}) scale(${sc.toFixed(4)})">${paths}</g>`;
+}
 
-  const bw = size * 0.03;
-  const borderEl = `<rect x="${bw/2}" y="${bw/2}" width="${size-bw}" height="${size-bw}" rx="${Math.max(0, r - bw/2)}" fill="none" stroke="${borderColor}" stroke-width="${bw}" stroke-opacity="0.4"/>`;
+function buildLogoSvgStr(
+  front: Slot,
+  back: Slot,
+  bg: string,
+  radius: number,
+  size = 200,
+  gradientEnd?: string,
+  textColorOverride?: string,
+  textGradientEnd?: string,
+  options?: { textRenderer?: TextRenderer; embedFonts?: boolean },
+): string {
+  const r = Math.round(size * radius);
+  const tColor = textColorOverride ?? (isLightHex(bg) ? "#09090b" : "#ffffff");
+  const cy = size / 2;
+  const E = size * 0.30;
+  const gap = size * 0.06;
+
+  // Fall back to "A" if nothing filled.
+  const filled: Slot[] = [];
+  if (isSlotFilled(front)) filled.push(front);
+  if (isSlotFilled(back)) filled.push(back);
+  if (filled.length === 0) filled.push({ kind: "char", value: "A" });
+
+  const slotCount = filled.length;
+  const groupW = slotCount === 2 ? E + gap + E : E;
+  const groupLeft = (size - groupW) / 2;
+  const cxs = filled.map((_, i) => groupLeft + E / 2 + i * (E + gap));
+
+  const useGrad = !!gradientEnd;
+  const useTextGrad = !!textGradientEnd;
+  const textRenderer = options?.textRenderer ?? renderTextSlot;
+  // When using path renderer (export mode), no @import needed since glyphs
+  // are already embedded as <path> data.
+  const embedFontImports = options?.embedFonts ?? !options?.textRenderer;
+
+  // Detect font requirements across all char slots.
+  const charSlots = filled.filter((s) => s.kind === "char");
+  const needsPacifico = charSlots.some((s) => /^[a-z]+$/.test(s.value));
+  const needsPretendard = charSlots.some((s) => /[가-힣]/.test(s.value));
+
+  const fontImports = embedFontImports
+    ? [
+        needsPacifico ? `<style>@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');</style>` : "",
+        needsPretendard ? `<style>@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');</style>` : "",
+      ].filter(Boolean).join("")
+    : "";
+
+  const defsInner = [
+    fontImports,
+    useGrad ? `<linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="${gradientEnd}"/></linearGradient>` : "",
+    useTextGrad ? `<linearGradient id="tg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${tColor}"/><stop offset="100%" stop-color="${textGradientEnd}"/></linearGradient>` : "",
+  ].filter(Boolean).join("");
+  const defsEl = defsInner ? `<defs>${defsInner}</defs>` : "";
+  const bgFill = useGrad ? "url(#lg)" : bg;
+  const fgFill = useTextGrad ? "url(#tg)" : tColor;
+  const borderColor = invertHex(bg);
+  const ringInner = gradientEnd ?? bg;
+
+  const slotElements = filled.map((slot, i) => {
+    const cx = cxs[i];
+    return slot.kind === "char"
+      ? textRenderer(slot.value, cx, cy, E, fgFill)
+      : renderSymbolSlot(slot.value, cx, cy, E, fgFill, ringInner);
+  }).join("");
+
+  const bw = Math.max(1, size * 0.008);
+  const borderEl = `<rect x="${bw/2}" y="${bw/2}" width="${size-bw}" height="${size-bw}" rx="${Math.max(0, r - bw/2)}" fill="none" stroke="${borderColor}" stroke-width="${bw}" stroke-opacity="0.25"/>`;
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`,
     defsEl,
     `<rect width="${size}" height="${size}" rx="${r}" fill="${bgFill}"/>`,
-    borderEl, textEl, symbolEl,
+    borderEl, slotElements,
     `</svg>`,
   ].join("");
 }
 
-function buildLogoDataUrl(text: string, symbolId: string, bg: string, radius: number, size = 200, gradientEnd?: string): string {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(buildLogoSvgStr(text, symbolId, bg, radius, size, gradientEnd))}`;
+/** Async build: fetches fonts, converts text → path. Use for downloads. */
+async function buildLogoSvgStrForExport(
+  front: Slot,
+  back: Slot,
+  bg: string,
+  radius: number,
+  size = 512,
+  gradientEnd?: string,
+  textColorOverride?: string,
+  textGradientEnd?: string,
+): Promise<string> {
+  const fonts = await loadExportFonts();
+  const renderer = makePathTextRenderer(fonts);
+  return buildLogoSvgStr(
+    front, back, bg, radius, size,
+    gradientEnd, textColorOverride, textGradientEnd,
+    { textRenderer: renderer, embedFonts: false },
+  );
+}
+
+/** Maskable variant: full-bleed (radius 0, no border) for Android adaptive icons. */
+async function buildLogoSvgStrForMaskable(
+  front: Slot,
+  back: Slot,
+  bg: string,
+  size = 512,
+  gradientEnd?: string,
+  textColorOverride?: string,
+  textGradientEnd?: string,
+): Promise<string> {
+  const fonts = await loadExportFonts();
+  const renderer = makePathTextRenderer(fonts);
+  // radius 0 + we strip the border in post-processing (regex) so the canvas
+  // padding controls the safe area, not a baked-in stroke.
+  const svg = buildLogoSvgStr(
+    front, back, bg, 0, size,
+    gradientEnd, textColorOverride, textGradientEnd,
+    { textRenderer: renderer, embedFonts: false },
+  );
+  // Drop the inner 0.25-opacity border rect (it would land at 80% of the masked area).
+  return svg.replace(/<rect [^/]*stroke-opacity="0\.25"[^/]*\/>/, "");
 }
 
 function downloadSvg(svgStr: string, filename: string) {
   const blob = new Blob([svgStr], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function svgToPngBlob(svgStr: string, size: number): Promise<Blob> {
+  // Pre-warm web fonts so canvas draws with the right typeface.
+  // Best-effort — failures fall through to system font fallback in the SVG stack.
+  try {
+    const anyDoc = document as Document & { fonts?: { ready?: Promise<unknown> } };
+    if (anyDoc.fonts?.ready) await anyDoc.fonts.ready;
+  } catch {}
+  const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(svgBlob);
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("svg image load failed"));
+      img.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no 2d context");
+    ctx.drawImage(img, 0, 0, size, size);
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png");
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function downloadPng(svgStr: string, size: number, filename: string) {
+  const blob = await svgToPngBlob(svgStr, size);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = filename; a.click();
@@ -224,15 +422,30 @@ function SymbolIcon({ sym, size = 18 }: { sym: typeof LOGO_SYMBOLS[0]; size?: nu
     );
   }
   const rot = sym.rotate != null ? `rotate(${sym.rotate}, ${vb / 2}, ${vb / 2})` : undefined;
+  const dList = Array.isArray(sym.d) ? sym.d : [sym.d as string];
+  if (sym.stroke) {
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${vb} ${vb}`} fill="none" stroke="currentColor" strokeWidth={sym.strokeWidth ?? 2} strokeLinecap="round" strokeLinejoin="round">
+        {dList.map((d, i) => <path key={i} d={d} transform={rot} />)}
+      </svg>
+    );
+  }
   return (
     <svg width={size} height={size} viewBox={`0 0 ${vb} ${vb}`} fill="currentColor">
-      <path d={sym.d} fillRule={(sym.fillRule as React.SVGAttributes<SVGPathElement>["fillRule"]) ?? "nonzero"} transform={rot} />
+      {dList.map((d, i) => (
+        <path key={i} d={d} fillRule={(sym.fillRule as React.SVGAttributes<SVGPathElement>["fillRule"]) ?? "nonzero"} transform={rot} />
+      ))}
     </svg>
   );
 }
 
-function PickerLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold mb-2">{children}</p>;
+function PickerHeader({ label, right }: { label: string; right?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <span className="text-[11px] font-semibold text-zinc-400 uppercase">{label}</span>
+      {right}
+    </div>
+  );
 }
 
 /* ══════════════════════════════════════════════
@@ -240,257 +453,918 @@ function PickerLabel({ children }: { children: React.ReactNode }) {
 ══════════════════════════════════════════════ */
 const ALPHABET_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const ALPHABET_LOWER = "abcdefghijklmnopqrstuvwxyz".split("");
+const NUMBERS = Array.from({ length: 100 }, (_, i) => String(i)); // "0" ~ "99"
+// Curated single-syllable Hangul characters that read well as a logo glyph.
+const HANGUL_CHARS = [
+  "한","꿈","별","불","빛","달","해","산","강","길",
+  "꽃","봄","눈","비","물","흙","힘","솔","숲","섬",
+  "품","멋","맛","곰","숨","잎","뜻","돌","뜰","맘",
+  "용","햇","첫","온","앞","글","맥","참","끝","님",
+];
+
+type CharMode = "upper" | "lower" | "num" | "hangul";
+type PickerMode = CharMode | "symbol";
+const MODE_OPTIONS: { id: PickerMode; label: string }[] = [
+  { id: "upper",  label: "AA" },
+  { id: "lower",  label: "Aa" },
+  { id: "num",    label: "12" },
+  { id: "hangul", label: "한글" },
+  { id: "symbol", label: "심볼" },
+];
+function charsForMode(m: CharMode) {
+  switch (m) {
+    case "upper":  return ALPHABET_UPPER;
+    case "lower":  return ALPHABET_LOWER;
+    case "num":    return NUMBERS;
+    case "hangul": return HANGUL_CHARS;
+  }
+}
+// black → reverse rainbow (violet → red) → neutrals
 const LOGO_COLORS = [
-  ...Object.entries(colors).map(([name, hex]) => ({ name, hex })),
   { name: "black",    hex: "#09090b" },
-  { name: "white",    hex: "#fafafa" },
-  { name: "slate",    hex: "#334155" },
-  { name: "navy",     hex: "#1e3a5f" },
-  { name: "forest",   hex: "#14532d" },
-  { name: "maroon",   hex: "#7f1d1d" },
-  { name: "fuchsia",  hex: "#d946ef" },
-  { name: "coral",    hex: "#f97316" },
-  { name: "emerald",  hex: "#10b981" },
-  { name: "sky",      hex: "#38bdf8" },
-  { name: "rose",     hex: "#fb7185" },
-  { name: "amber",    hex: "#f59e0b" },
-  { name: "indigo",   hex: "#312e81" },
-  { name: "teal",     hex: "#0d9488" },
-  { name: "lime",     hex: "#84cc16" },
-  { name: "cyan",     hex: "#06b6d4" },
-  { name: "violet",   hex: "#7c3aed" },
-  { name: "pink",     hex: "#ec4899" },
-  { name: "brown",    hex: "#78350f" },
   { name: "charcoal", hex: "#27272a" },
+  { name: "slate",    hex: "#334155" },
+  // violet / purple
+  { name: "violet",   hex: "#7c3aed" },
+  { name: "purple",   hex: "#8b5cf6" },
+  { name: "fuchsia",  hex: "#d946ef" },
+  // indigo / navy
+  { name: "indigo",   hex: "#312e81" },
+  { name: "navy",     hex: "#1e3a5f" },
+  // blue / sky / cyan
+  { name: "blue",     hex: "#3b82f6" },
+  { name: "sky",      hex: "#38bdf8" },
+  { name: "cyan",     hex: "#06b6d4" },
+  // teal / green
+  { name: "teal",     hex: "#0d9488" },
+  { name: "emerald",  hex: "#10b981" },
+  { name: "forest",   hex: "#14532d" },
+  { name: "lime",     hex: "#84cc16" },
+  // yellow / amber
+  { name: "yellow",   hex: "#eab308" },
+  { name: "amber",    hex: "#f59e0b" },
+  // orange
+  { name: "orange",   hex: "#f97316" },
+  // red / maroon
+  { name: "red",      hex: "#ef4444" },
+  { name: "maroon",   hex: "#7f1d1d" },
+  // pink / rose (red family)
+  { name: "pink",     hex: "#ec4899" },
+  { name: "rose",     hex: "#fb7185" },
+  // warm neutrals / white
+  { name: "brown",    hex: "#78350f" },
+  { name: "white",    hex: "#fafafa" },
 ];
-const RADIUS_PRESETS = [
-  { label: "□", value: 0 },
-  { label: "▢", value: 0.15 },
-  { label: "⬜", value: 0.25 },
-  { label: "●", value: 0.5 },
+const LOGO_RADIUS = 0.15;
+
+/* ══════════════════════════════════════════════
+   Style presets: bg × text color scheme
+══════════════════════════════════════════════ */
+const LOGO_STYLES = [
+  { id: "solid",       label: "solid"    },
+  { id: "gradient",    label: "gradient" },
+  { id: "onWhite",     label: "white"    },
+  { id: "onWhiteGrad", label: "white +"  },
+  { id: "onBlack",     label: "dark"     },
+  { id: "onBlackGrad", label: "dark +"   },
+] as const;
+type StyleId = typeof LOGO_STYLES[number]["id"];
+
+/** 3 base style families × {solid, gradient} colorMode = 6 actual style ids. */
+type StyleBaseId = "color" | "onWhite" | "onBlack";
+const STYLE_BASES: { id: StyleBaseId; label: string }[] = [
+  { id: "color",   label: "컬러"    },
+  { id: "onWhite", label: "화이트" },
+  { id: "onBlack", label: "다크"    },
 ];
+function resolveStyleId(base: StyleBaseId, mode: "solid" | "gradient"): StyleId {
+  if (base === "color")   return mode === "gradient" ? "gradient"    : "solid";
+  if (base === "onWhite") return mode === "gradient" ? "onWhiteGrad" : "onWhite";
+  return mode === "gradient" ? "onBlackGrad" : "onBlack";
+}
+
+function resolveStyle(styleId: StyleId, color: string): {
+  bg: string;
+  bgGradEnd?: string;
+  textColor?: string;
+  textGradEnd?: string;
+} {
+  const WHITE = "#fafafa";
+  const BLACK = "#09090b";
+  const autoText = isLightHex(color) ? BLACK : "#ffffff";
+  const end = autoGradientEnd(color);
+  switch (styleId) {
+    case "solid":       return { bg: color, textColor: autoText };
+    case "gradient":    return { bg: color, bgGradEnd: end, textColor: autoText };
+    case "onWhite":     return { bg: WHITE, textColor: color };
+    case "onWhiteGrad": return { bg: WHITE, textColor: color, textGradEnd: end };
+    case "onBlack":     return { bg: BLACK, textColor: color };
+    case "onBlackGrad": return { bg: BLACK, textColor: color, textGradEnd: end };
+  }
+}
+
+type ShowcaseLogo = {
+  front: Slot;
+  back: Slot;
+  color: string;
+  style: StyleId;
+};
+
+// Hand-picked combinations that showcase the tool's range.
+// Color hues are intentionally distributed across the spectrum.
+const HOME_SHOWCASE: ShowcaseLogo[] = [
+  { front: { kind: "char", value: "M"  }, back: { kind: "symbol", value: "down"     }, color: "#09090b", style: "solid"        }, // 블랙 · Markdown
+  { front: { kind: "char", value: "N"  }, back: { kind: "symbol", value: "right"    }, color: "#3b82f6", style: "gradient"     }, // 블루
+  { front: { kind: "char", value: "V"  }, back: { kind: "symbol", value: "triangle" }, color: "#10b981", style: "onWhite"      }, // 에메랄드
+  { front: { kind: "char", value: "별" }, back: { kind: "symbol", value: "star"     }, color: "#eab308", style: "onBlack"      }, // 옐로우
+  { front: { kind: "char", value: "S"  }, back: { kind: "symbol", value: "zap"      }, color: "#7c3aed", style: "gradient"     }, // 바이올렛
+  { front: { kind: "char", value: "한" }, back: { kind: "symbol", value: "circle"   }, color: "#ef4444", style: "onWhite"      }, // 레드
+  { front: { kind: "char", value: "D"  }, back: { kind: "symbol", value: "diamond"  }, color: "#0d9488", style: "solid"        }, // 틸
+  { front: { kind: "char", value: "a"  }, back: { kind: "symbol", value: "sparkle"  }, color: "#fb7185", style: "onWhite"      }, // 로즈
+  { front: { kind: "char", value: "99" }, back: { kind: "symbol", value: "check"    }, color: "#84cc16", style: "solid"        }, // 라임
+  { front: { kind: "char", value: "꿈" }, back: { kind: "symbol", value: "meteor2"  }, color: "#d946ef", style: "onBlackGrad"  }, // 푸시아
+  { front: { kind: "char", value: "F"  }, back: { kind: "symbol", value: "flame"    }, color: "#f97316", style: "solid"        }, // 오렌지
+  { front: { kind: "symbol", value: "layers" }, back: { kind: "char", value: "k"    }, color: "#06b6d4", style: "onWhiteGrad"  }, // 사이안 · 심볼이 앞
+];
+
+function DiceIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+      <path d="M16 8h.01"/>
+      <path d="M8 8h.01"/>
+      <path d="M8 16h.01"/>
+      <path d="M16 16h.01"/>
+      <path d="M12 12h.01"/>
+    </svg>
+  );
+}
+
+// Row-major 2-row grid with horizontal scroll: fills row 1 fully, then row 2.
+function gridStyle(itemCount: number): React.CSSProperties {
+  const cols = Math.max(1, Math.ceil(itemCount / 2));
+  return {
+    display: "grid",
+    gridTemplateColumns: `repeat(${cols}, 2.75rem)`,
+    gridTemplateRows: "repeat(2, 2.75rem)",
+    gap: "0.375rem",
+  };
+}
+
+function DownloadIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function HomeIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <path d="M9 22V12h6v10" />
+    </svg>
+  );
+}
+
+function WandIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72" />
+      <path d="m14 7 3 3" />
+      <path d="M5 6v4" />
+      <path d="M19 14v4" />
+      <path d="M10 2v2" />
+      <path d="M7 8H3" />
+      <path d="M21 16h-4" />
+      <path d="M11 3H9" />
+    </svg>
+  );
+}
+
+function HomeView({ onStart }: { onStart: () => void }) {
+  const rowA = useMemo(() => {
+    const half = HOME_SHOWCASE.slice(0, 6);
+    return [...half, ...half];
+  }, []);
+  const rowB = useMemo(() => {
+    const half = HOME_SHOWCASE.slice(6, 12);
+    return [...half, ...half];
+  }, []);
+  const renderCfg = (c: ShowcaseLogo, size: number) => {
+    const s = resolveStyle(c.style, c.color);
+    return buildLogoSvgStr(c.front, c.back, s.bg, LOGO_RADIUS, size, s.bgGradEnd, s.textColor, s.textGradEnd);
+  };
+
+  const initialCount = ALPHABET_UPPER.length + ALPHABET_LOWER.length + NUMBERS.length + HANGUL_CHARS.length;
+  const symbolCount = LOGO_SYMBOLS.filter((s) => s.id !== "none").length;
+
+  // Auto-rotating hero logo — cycles through showcase every 1.6s
+  const [heroIdx, setHeroIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setHeroIdx((i) => (i + 1) % HOME_SHOWCASE.length), 1600);
+    return () => clearInterval(t);
+  }, []);
+  const hero = HOME_SHOWCASE[heroIdx];
+
+  return (
+    <div className="pb-8">
+      {/* HERO ─ giant logo + brand + slogan + primary CTA */}
+      <Section className="pt-4 pb-2">
+        <div className="flex items-center justify-center mb-5">
+          <LogoInline
+            svgStr={renderCfg(hero, 400)}
+            displaySize={140}
+            className="shadow-2xl overflow-hidden transition-all duration-500"
+            style={{ borderRadius: `${Math.round(140 * LOGO_RADIUS)}px` }}
+          />
+        </div>
+        <h1 className="text-[44px] font-black leading-none text-zinc-900 tracking-tighter mb-2 text-center">
+          logodown
+        </h1>
+        <p className="text-[15px] text-zinc-500 leading-relaxed mb-4 text-center break-keep">
+          Make logos like <span className="font-black text-zinc-700">markdown logo</span>.<br />
+          한 글자 + 한 심볼 → <span className="font-black text-zinc-700">파비콘부터 PWA까지</span>
+        </p>
+        <Button variant="dark" full onClick={onStart} className="py-3 mb-3">
+          1분 만에 로고 만들기 →
+        </Button>
+        <div className="flex flex-wrap gap-1.5 justify-center mb-3">
+          <Badge variant="default" size="sm">이니셜 {initialCount}</Badge>
+          <Badge variant="default" size="sm">심볼 {symbolCount}</Badge>
+          <Badge variant="default" size="sm">SVG · PNG · ICO</Badge>
+        </div>
+        {(() => {
+          const slotOpts = initialCount + symbolCount;          // 291 = 192 + 99
+          const styleCount = 3;                                 // 컬러 / 화이트 / 다크
+          const modeCount = 2;                                  // 단색 / 그라데
+          const paletteColors = LOGO_COLORS.length;             // 24
+          const total = slotOpts * slotOpts * styleCount * modeCount * paletteColors;
+          return (
+            <div className="rounded-2xl bg-zinc-50 p-3 break-keep">
+              <div className="text-[11px] text-zinc-500 mb-2 leading-relaxed text-center">
+                <span className="font-bold text-zinc-700">앞·뒤 슬롯</span>
+                <span className="text-zinc-400"> ({slotOpts}²) </span>×
+                <span className="font-bold text-zinc-700"> 스타일</span>
+                <span className="text-zinc-400"> ({styleCount}) </span>×
+                <span className="font-bold text-zinc-700"> 모드</span>
+                <span className="text-zinc-400"> ({modeCount}) </span>×
+                <span className="font-bold text-zinc-700"> 색상</span>
+                <span className="text-zinc-400"> ({paletteColors})</span>
+              </div>
+              <div className="text-lg font-black text-zinc-900 text-center tabular-nums">
+                {total.toLocaleString()}<span className="text-zinc-500 text-sm font-bold">+ 가지</span>
+              </div>
+              <div className="text-[10px] text-zinc-400 mt-2 text-center leading-relaxed break-keep">
+                슬롯마다 <strong>이니셜 {initialCount} + 심볼 {symbolCount} = {slotOpts}종</strong> 중 선택<br />
+                스타일 {styleCount}종(컬러·화이트·다크) · 모드 {modeCount}종(단색·그라데) · 팔레트 {paletteColors}색
+              </div>
+            </div>
+          );
+        })()}
+      </Section>
+
+      {/* CROSSING MARQUEE ─ visual proof of variety */}
+      <div className="my-6 space-y-3 overflow-hidden">
+        <div className="flex gap-3 lm-marquee">
+          {rowA.map((c, i) => (
+            <LogoInline
+              key={`a-${i}`}
+              svgStr={renderCfg(c, 200)}
+              displaySize={84}
+              className="shadow-lg overflow-hidden"
+              style={{ borderRadius: `${Math.round(84 * LOGO_RADIUS)}px` }}
+            />
+          ))}
+        </div>
+        <div className="flex gap-3 lm-marquee" style={{ animationDirection: "reverse" }}>
+          {rowB.map((c, i) => (
+            <LogoInline
+              key={`b-${i}`}
+              svgStr={renderCfg(c, 200)}
+              displaySize={84}
+              className="shadow-lg overflow-hidden"
+              style={{ borderRadius: `${Math.round(84 * LOGO_RADIUS)}px` }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* WHY ─ 3 stacked feature cards with strong typography */}
+      <Section className="my-2">
+        <h2 className="text-2xl font-black text-zinc-900 mb-4 leading-tight tracking-tight break-keep">
+          왜 logodown인가
+        </h2>
+        <div className="space-y-2">
+          <div className="rounded-2xl bg-zinc-50 p-4 break-keep">
+            <div className="text-xs font-black text-zinc-400 mb-1 tracking-widest">01</div>
+            <div className="text-base font-black text-zinc-900 mb-1">최소 요소, 최대 식별성</div>
+            <p className="text-[13px] text-zinc-600 leading-relaxed">
+              16px 파비콘부터 빌보드까지 한 번에 살아남는 공식. Markdown · Next · Vue가 증명.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-zinc-50 p-4 break-keep">
+            <div className="text-xs font-black text-zinc-400 mb-1 tracking-widest">02</div>
+            <div className="text-base font-black text-zinc-900 mb-1">AI보다 명확하게</div>
+            <p className="text-[13px] text-zinc-600 leading-relaxed">
+              "그럴싸한" 로고 대신 이니셜 + 심볼 두 조각. 0.5초 만에 읽히는 브랜드.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-zinc-50 p-4 break-keep">
+            <div className="text-xs font-black text-zinc-400 mb-1 tracking-widest">03</div>
+            <div className="text-base font-black text-zinc-900 mb-1">한글도 동등하게</div>
+            <p className="text-[13px] text-zinc-600 leading-relaxed">
+              "한", "별", "꿈" — 한 글자 완결 K-로고. 영문 수준의 디자인 일관성.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* OUTPUT FORMATS ─ what you actually get */}
+      <Section className="my-7">
+        <h2 className="text-2xl font-black text-zinc-900 mb-4 leading-tight tracking-tight break-keep">
+          어디든 쓸 수 있어요
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-2xl bg-zinc-900 text-white p-4 break-keep">
+            <div className="text-2xl font-black mb-1">파비콘</div>
+            <div className="text-[11px] text-white/60 mb-3">favicon.ico · 16/32 PNG</div>
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/10 w-fit">
+              <LogoInline svgStr={renderCfg(hero, 200)} displaySize={12} className="overflow-hidden" style={{ borderRadius: `${Math.round(12 * LOGO_RADIUS)}px` }} />
+              <span className="text-[10px] font-medium">logodown</span>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-zinc-50 p-4 break-keep">
+            <div className="text-2xl font-black text-zinc-900 mb-1">iOS</div>
+            <div className="text-[11px] text-zinc-500 mb-3">apple-touch 180px</div>
+            <LogoInline svgStr={renderCfg(hero, 200)} displaySize={48} className="shadow-md overflow-hidden" style={{ borderRadius: `${Math.round(48 * LOGO_RADIUS)}px` }} />
+          </div>
+          <div className="rounded-2xl bg-zinc-50 p-4 break-keep">
+            <div className="text-2xl font-black text-zinc-900 mb-1">PWA</div>
+            <div className="text-[11px] text-zinc-500 mb-3">192/512 + manifest</div>
+            <div className="flex gap-1.5 items-end">
+              <LogoInline svgStr={renderCfg(hero, 200)} displaySize={36} className="shadow-sm overflow-hidden" style={{ borderRadius: `${Math.round(36 * LOGO_RADIUS)}px` }} />
+              <LogoInline svgStr={renderCfg(hero, 200)} displaySize={52} className="shadow-md overflow-hidden" style={{ borderRadius: `${Math.round(52 * LOGO_RADIUS)}px` }} />
+            </div>
+          </div>
+          <div className="rounded-2xl bg-zinc-900 text-white p-4 break-keep">
+            <div className="text-2xl font-black mb-1">소셜</div>
+            <div className="text-[11px] text-white/60 mb-3">OG 1200×630</div>
+            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/10">
+              <LogoInline svgStr={renderCfg(hero, 200)} displaySize={20} className="overflow-hidden" style={{ borderRadius: `${Math.round(20 * LOGO_RADIUS)}px` }} />
+              <span className="text-xs font-bold">logodown</span>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* BOTTOM CTA */}
+      <Section>
+        <div className="rounded-2xl bg-zinc-900 text-white p-5 text-center break-keep">
+          <div className="text-xl font-black mb-1">시작 준비 완료</div>
+          <p className="text-[13px] text-white/60 mb-4 leading-relaxed">
+            가입·결제 없음. 브라우저에서 바로, 1분 안에.
+          </p>
+          <button
+            onClick={onStart}
+            className="w-full py-3 rounded-xl bg-white text-zinc-900 font-black text-sm hover:opacity-90 transition-opacity cursor-pointer"
+          >
+            지금 만들기 →
+          </button>
+        </div>
+      </Section>
+    </div>
+  );
+}
 
 /* ══════════════════════════════════════════════
    Main App
 ══════════════════════════════════════════════ */
 export default function App() {
-  const [initial, setInitial] = useState("M");
-  const [symbol, setSymbol] = useState("down");
-  const [color, setColor] = useState(colors.blue);
-  const [radius, setRadius] = useState(0.22);
-  const [gradient, setGradient] = useState(false);
-  const [uppercase, setUppercase] = useState(true);
-  const [themeOpen, setThemeOpen] = useState(false);
-  const [dark, setDark] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
-  );
+  const [view, setView] = useState<"home" | "create">("home");
+  const [front, setFront] = useState<Slot>({ kind: "char", value: "M" });
+  const [back, setBack] = useState<Slot>({ kind: "symbol", value: "down" });
+  const [activeSlot, setActiveSlot] = useState<"front" | "back">("back");
+  const [pickerMode, setPickerMode] = useState<PickerMode>("symbol");
+  const [color, setColor] = useState<string>("#09090b");
+  const [colorMode, setColorMode] = useState<"solid" | "gradient">("solid");
+  const [styleBase, setStyleBase] = useState<StyleBaseId>("color");
+  const style: StyleId = resolveStyleId(styleBase, colorMode);
+  const toast = useToast();
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
+  const scheme = resolveStyle(style, color);
+  const renderLogo = (size: number) =>
+    buildLogoSvgStr(
+      front, back, scheme.bg, LOGO_RADIUS, size,
+      scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd,
+    );
+  const logoSvgStr = renderLogo(200);
+  const rPx = (s: number) => Math.round(s * LOGO_RADIUS);
+  const wordmarkLabel =
+    (front.kind === "char" && front.value) ||
+    (back.kind === "char" && back.value) ||
+    "M";
 
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = (e: MediaQueryListEvent) => setDark(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  const handleRandom = () => {
-    const syms = LOGO_SYMBOLS.filter((s) => s.id !== "none");
-    setSymbol(syms[Math.floor(Math.random() * syms.length)].id);
-    const alpha = uppercase ? ALPHABET_UPPER : ALPHABET_LOWER;
-    setInitial(alpha[Math.floor(Math.random() * alpha.length)]);
-    setColor(LOGO_COLORS[Math.floor(Math.random() * LOGO_COLORS.length)].hex);
-    setRadius(RADIUS_PRESETS[Math.floor(Math.random() * RADIUS_PRESETS.length)].value);
+  const activeValue = activeSlot === "front" ? front : back;
+  const setActiveValue = (slot: Slot) => {
+    if (activeSlot === "front") setFront(slot);
+    else setBack(slot);
   };
 
-  const gradientEnd = gradient ? autoGradientEnd(color) : undefined;
-  const logoSvgStr = buildLogoSvgStr(initial, symbol, color, radius, 200, gradientEnd);
-  const rPx = (s: number) => Math.round(s * radius);
+  const pickFromGrid = (kind: SlotKind, value: string) => {
+    setActiveValue({ kind, value });
+  };
+
+  const randomSlot = (): Slot => {
+    const syms = LOGO_SYMBOLS.filter((s) => s.id !== "none");
+    const modes: CharMode[] = ["upper", "lower", "num", "hangul"];
+    if (Math.random() < 0.5) {
+      const m = modes[Math.floor(Math.random() * modes.length)];
+      const chars = charsForMode(m);
+      return { kind: "char", value: chars[Math.floor(Math.random() * chars.length)] };
+    }
+    return { kind: "symbol", value: syms[Math.floor(Math.random() * syms.length)].id };
+  };
+
+  const handleRandomSlots = () => {
+    setFront(randomSlot());
+    setBack(randomSlot());
+  };
+
+  // Randomize only the currently-active slot — lets user lock one side and roll the other.
+  const handleRandomActiveSlot = () => {
+    setActiveValue(randomSlot());
+  };
+
+  const handleRandomColor = () => {
+    setColor(LOGO_COLORS[Math.floor(Math.random() * LOGO_COLORS.length)].hex);
+    setColorMode(Math.random() < 0.5 ? "solid" : "gradient");
+    setStyleBase(STYLE_BASES[Math.floor(Math.random() * STYLE_BASES.length)].id);
+  };
+
+  const handleRandom = () => {
+    handleRandomSlots();
+    handleRandomColor();
+  };
+
+  const baseName = (
+    (front.kind === "char" ? front.value : "") ||
+    (back.kind === "char" ? back.value : "") ||
+    "logo"
+  ).toLowerCase();
+
+  const renderExportLogo = (size: number) =>
+    buildLogoSvgStrForExport(
+      front, back, scheme.bg, LOGO_RADIUS, size,
+      scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd,
+    );
+
+  const handleDownloadSvg = async () => {
+    const filename = `${baseName}.svg`;
+    try {
+      const svg = await renderExportLogo(512);
+      downloadSvg(svg, filename);
+      toast(`${filename} 다운로드 완료`, { variant: "success" });
+    } catch {
+      toast("SVG 생성 실패 (폰트 로드 오류)", { variant: "error" });
+    }
+  };
+
+  const handleDownloadPng = async (size: number, label: string) => {
+    const filename = `${baseName}-${label}.png`;
+    try {
+      const svg = await renderExportLogo(512);
+      await downloadPng(svg, size, filename);
+      toast(`${filename} (${size}×${size}) 다운로드 완료`, { variant: "success" });
+    } catch {
+      toast("PNG 변환 실패", { variant: "error" });
+    }
+  };
+
+  const handleDownloadPack = async (category: SeoPackCategory, suffix: string) => {
+    toast("패키지 빌드 중…", { variant: "info" });
+    try {
+      const needsMaskable = category === "all" || category === "pwa";
+      const [iconSvg, maskableSvg] = await Promise.all([
+        buildLogoSvgStrForExport(
+          front, back, scheme.bg, LOGO_RADIUS, 512,
+          scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd,
+        ),
+        needsMaskable
+          ? buildLogoSvgStrForMaskable(
+              front, back, scheme.bg, 512,
+              scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd,
+            )
+          : Promise.resolve(""),
+      ]);
+      const textColor = scheme.textColor ?? (isLightHex(scheme.bg) ? "#09090b" : "#ffffff");
+      const zipBytes = await buildSeoPack({
+        iconSvg,
+        maskableSvg,
+        brandName: "logodown",
+        slogan: "Make logos like markdown logo",
+        bgColor: scheme.bg,
+        bgGradEnd: scheme.bgGradEnd,
+        textColor,
+      }, category);
+      const blob = new Blob([zipBytes as BlobPart], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const filename = `logodown-${baseName}-${suffix}.zip`;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      const sizeKb = Math.round(zipBytes.byteLength / 1024);
+      toast(`${filename} (${sizeKb}KB) 다운로드 완료`, { variant: "success" });
+    } catch (e) {
+      console.error(e);
+      toast("패키지 빌드 실패", { variant: "error" });
+    }
+  };
 
   const cellCls = (active: boolean) =>
-    `w-11 h-11 flex items-center justify-center rounded-2xl font-black text-sm cursor-pointer transition-all select-none flex-shrink-0 ${
+    `w-11 h-11 flex items-center justify-center rounded-2xl font-black text-sm cursor-pointer transition-all select-none shrink-0 ${
       active
-        ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 scale-95 shadow-md"
-        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+        ? "bg-zinc-900 text-white scale-95 shadow-md"
+        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
     }`;
-  const scrollRow = "grid grid-rows-2 grid-flow-col gap-1.5 overflow-x-auto pb-1 scrollbar-hide";
+  const togglePillCls = (active: boolean) =>
+    `text-[10px] font-black px-2 py-0.5 rounded-lg transition-colors cursor-pointer ${
+      active
+        ? "bg-zinc-900 text-white"
+        : "bg-zinc-100 text-zinc-500"
+    }`;
 
   return (
-    <>
+    <Watermark color="#09090b" text="logodown" speed={60}>
       <AppShell>
         <AppShellHeader>
-          <span className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">
-            Logo Maker
+          <span className="text-lg font-black text-zinc-900 tracking-tight">
+            logodown
           </span>
-          <ThemeButton color={color} dark={dark} onClick={() => setThemeOpen(true)} />
+          <ShareButton
+            title="logodown"
+            text="Make logos like markdown logo"
+            label="공유"
+          />
         </AppShellHeader>
 
         <AppShellContent>
-          {/* Preview + Random */}
-          <Section className="pt-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-black text-zinc-900 dark:text-white">미리보기</h2>
+          {view === "home" ? (
+            <HomeView onStart={() => setView("create")} />
+          ) : (
+          <>
+          {/* Preview */}
+          <Section className="pt-4 pb-2">
+            <div className="relative flex justify-center">
+              <LogoInline svgStr={logoSvgStr} displaySize={140} className="shadow-2xl transition-all duration-200 overflow-hidden" style={{ borderRadius: `${rPx(140)}px` }} />
               <button
                 onClick={handleRandom}
-                className="px-4 py-2 rounded-2xl text-sm font-black bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-80 transition-opacity cursor-pointer"
+                className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-2xl bg-zinc-900 text-white hover:opacity-80 transition-opacity cursor-pointer"
+                title="전체 랜덤"
               >
-                랜덤
+                <DiceIcon size={20} />
+                <span className="text-[11px] font-black">랜덤</span>
               </button>
-            </div>
-
-            <div className="flex justify-center mb-2">
-              <LogoInline svgStr={logoSvgStr} displaySize={112} className="shadow-2xl transition-all duration-200 overflow-hidden" style={{ borderRadius: `${rPx(112)}px` }} />
-            </div>
-
-            <div className="flex items-center justify-center gap-4 mb-1">
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                  <LogoInline svgStr={logoSvgStr} displaySize={16} className="overflow-hidden" style={{ borderRadius: `${rPx(16)}px` }} />
-                  <span className="text-[11px] text-zinc-600 dark:text-zinc-300 font-semibold">{initial}</span>
-                </div>
-                <span className="text-[9px] text-zinc-400">탭바</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-900">
-                  <LogoInline svgStr={logoSvgStr} displaySize={24} className="overflow-hidden" style={{ borderRadius: `${rPx(24)}px` }} />
-                  <span className="text-sm font-black text-zinc-900 dark:text-white">{initial}</span>
-                </div>
-                <span className="text-[9px] text-zinc-400">워드마크</span>
-              </div>
             </div>
           </Section>
 
-          <Divider />
+          <div className="mx-4 my-3 h-px bg-zinc-200" />
 
-          {/* Initials */}
+          {/* Slot picker — front/back tabs + mode pills + grid */}
           <Section>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">이니셜</p>
-              <button
-                onClick={() => {
-                  const next = !uppercase;
-                  setUppercase(next);
-                  setInitial((prev) => next ? prev.toUpperCase() : prev.toLowerCase());
-                }}
-                className={`text-[10px] font-black px-2 py-0.5 rounded-lg transition-colors cursor-pointer ${uppercase ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"}`}
-              >
-                {uppercase ? "AA" : "Aa"}
-              </button>
-            </div>
-            <div className={scrollRow}>
-              {(uppercase ? ALPHABET_UPPER : ALPHABET_LOWER).map((l) => (
-                <button key={l} onClick={() => setInitial(l)} className={cellCls(initial === l)}>
-                  {l}
-                </button>
-              ))}
-            </div>
-          </Section>
-
-          <Divider />
-
-          {/* Symbol */}
-          <Section>
-            <PickerLabel>심볼</PickerLabel>
-            <div className={scrollRow}>
-              <button
-                onClick={() => setSymbol("none")}
-                className={`w-11 h-11 flex items-center justify-center rounded-2xl cursor-pointer transition-all select-none flex-shrink-0 border-2 border-dashed ${
-                  symbol === "none"
-                    ? "border-zinc-900 dark:border-white bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 scale-95 shadow-md"
-                    : "border-zinc-300 dark:border-zinc-600 text-zinc-400 dark:text-zinc-500 hover:border-zinc-500 dark:hover:border-zinc-400"
-                }`}
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <line x1="1" y1="1" x2="13" y2="13"/>
-                  <line x1="13" y1="1" x2="1" y2="13"/>
-                </svg>
-              </button>
-              {LOGO_SYMBOLS.filter((s) => s.id !== "none").map((s) => (
-                <Tooltip key={s.id} label={s.id}>
-                  <button onClick={() => setSymbol(s.id)} className={cellCls(symbol === s.id)}>
-                    <SymbolIcon sym={s} size={18} />
+            <PickerHeader
+              label="슬롯"
+              right={
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRandomActiveSlot}
+                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 cursor-pointer transition-colors"
+                    title={`${activeSlot === "front" ? "앞" : "뒤"} 슬롯만 랜덤`}
+                  >
+                    <DiceIcon size={14} />
                   </button>
-                </Tooltip>
-              ))}
+                  <div className="flex gap-0.5 p-0.5 rounded-lg bg-zinc-100">
+                    {(["front", "back"] as const).map((s) => {
+                      const active = activeSlot === s;
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => setActiveSlot(s)}
+                          className={`px-2.5 py-0.5 rounded-md text-[10px] font-black transition-colors cursor-pointer ${
+                            active ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-700"
+                          }`}
+                        >
+                          {s === "front" ? "앞" : "뒤"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              }
+            />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex gap-0.5 p-0.5 rounded-lg bg-zinc-100">
+                {MODE_OPTIONS.map((m) => {
+                  const active = pickerMode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => setPickerMode(m.id)}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-colors cursor-pointer ${
+                        active ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-700"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-[11px] text-zinc-400 font-bold tabular-nums">
+                {pickerMode === "symbol"
+                  ? LOGO_SYMBOLS.filter((s) => s.id !== "none").length
+                  : charsForMode(pickerMode).length}
+                <span className="text-zinc-300 font-medium">개</span>
+              </span>
             </div>
+            {pickerMode === "symbol" ? (() => {
+              const symbols = LOGO_SYMBOLS.filter((s) => s.id !== "none");
+              return (
+                <div className="overflow-x-auto pb-1 scrollbar-hide">
+                  <div style={gridStyle(symbols.length)}>
+                    {symbols.map((s) => {
+                      const isActive = activeValue.kind === "symbol" && activeValue.value === s.id;
+                      return (
+                        <Tooltip key={s.id} label={s.id}>
+                          <button onClick={() => pickFromGrid("symbol", s.id)} className={cellCls(isActive)}>
+                            <SymbolIcon sym={s} size={18} />
+                          </button>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })() : (() => {
+              const chars = charsForMode(pickerMode);
+              // Apply the same font as the logo render so the picker previews
+              // each glyph in its actual typeface.
+              const cellFont: React.CSSProperties =
+                pickerMode === "lower"
+                  ? { fontFamily: "Pacifico, cursive", fontWeight: 400, fontSize: "1.1rem" }
+                  : pickerMode === "hangul"
+                    ? { fontFamily: "'Pretendard Variable', 'Pretendard', system-ui, sans-serif", fontWeight: 900 }
+                    : {};
+              return (
+                <div className="overflow-x-auto pb-1 scrollbar-hide">
+                  <div style={gridStyle(chars.length)}>
+                    {chars.map((l) => {
+                      const isActive = activeValue.kind === "char" && activeValue.value === l;
+                      return (
+                        <button
+                          key={l}
+                          onClick={() => pickFromGrid("char", l)}
+                          className={cellCls(isActive)}
+                          style={cellFont}
+                        >
+                          {l}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </Section>
 
-          <Divider />
+          <div className="mx-4 my-3 h-px bg-zinc-200" />
 
           {/* Color */}
           <Section>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">색상</p>
-              <button
-                onClick={() => setGradient((g) => !g)}
-                className={`text-[10px] font-black px-2 py-0.5 rounded-lg transition-colors cursor-pointer ${gradient ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"}`}
-              >
-                그라데이션
-              </button>
-            </div>
-            <div className={scrollRow}>
-              {LOGO_COLORS.map(({ name, hex }) => (
-                <button
-                  key={name}
-                  onClick={() => setColor(hex)}
-                  className={`w-11 h-11 rounded-2xl cursor-pointer transition-all flex-shrink-0 ${color === hex ? "scale-90 ring-2 ring-offset-2 ring-zinc-900 dark:ring-white" : "hover:scale-95"}`}
-                  style={gradient ? { background: `linear-gradient(135deg, ${hex}, ${autoGradientEnd(hex)})` } : { backgroundColor: hex }}
-                  title={name}
-                />
-              ))}
-              <label className="w-11 h-11 rounded-2xl cursor-pointer flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 transition-colors relative overflow-hidden flex-shrink-0">
-                <span className="text-zinc-400 text-lg font-black">+</span>
-                <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
-              </label>
+            <PickerHeader
+              label="색상"
+              right={
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRandomColor}
+                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 cursor-pointer transition-colors"
+                    title="색상 랜덤"
+                  >
+                    <DiceIcon size={14} />
+                  </button>
+                  <div className="flex gap-0.5 p-0.5 rounded-lg bg-zinc-100">
+                    {([
+                      { id: "solid",    label: "단색"       },
+                      { id: "gradient", label: "그라데이션" },
+                    ] as const).map((m) => {
+                      const active = colorMode === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          onClick={() => setColorMode(m.id)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-colors cursor-pointer ${
+                            active ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-700"
+                          }`}
+                        >
+                          {m.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              }
+            />
+            <div className="overflow-x-auto pb-1 scrollbar-hide">
+              <div style={gridStyle(LOGO_COLORS.length + 1)}>
+                {LOGO_COLORS.map(({ name, hex }) => {
+                  const swatchBg = colorMode === "gradient"
+                    ? `linear-gradient(135deg, ${hex}, ${autoGradientEnd(hex)})`
+                    : undefined;
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => setColor(hex)}
+                      className={`relative w-11 h-11 rounded-2xl cursor-pointer transition-all flex items-center justify-center ${color === hex ? "scale-90" : "hover:scale-95"}`}
+                      style={swatchBg ? { background: swatchBg } : { backgroundColor: hex }}
+                      title={name}
+                    >
+                      {color === hex && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isLightHex(hex) ? "#09090b" : "#ffffff"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+                <label className="w-11 h-11 rounded-2xl cursor-pointer flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 transition-colors relative overflow-hidden">
+                  <span className="text-zinc-400 text-lg font-black">+</span>
+                  <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                </label>
+              </div>
             </div>
           </Section>
 
-          <Divider />
+          <div className="mx-4 my-3 h-px bg-zinc-200" />
 
-          {/* Radius */}
+          {/* Style */}
           <Section>
-            <PickerLabel>모서리</PickerLabel>
-            <div className="flex gap-1.5">
-              {RADIUS_PRESETS.map((p) => (
-                <button key={p.value} onClick={() => setRadius(p.value)} className={cellCls(radius === p.value)}>
-                  {p.label}
-                </button>
-              ))}
+            <SectionHeader>스타일</SectionHeader>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {STYLE_BASES.map((sb) => {
+                const sid = resolveStyleId(sb.id, colorMode);
+                const s = resolveStyle(sid, color);
+                const preview = buildLogoSvgStr(
+                  front, back, s.bg, LOGO_RADIUS, 200,
+                  s.bgGradEnd, s.textColor, s.textGradEnd,
+                );
+                const active = styleBase === sb.id;
+                const tileRadius = Math.round(44 * LOGO_RADIUS);
+                return (
+                  <button
+                    key={sb.id}
+                    onClick={() => setStyleBase(sb.id)}
+                    title={sb.label}
+                    className={`relative cursor-pointer transition-all shrink-0 overflow-hidden ${active ? "scale-90" : "hover:scale-95"}`}
+                    style={{ borderRadius: `${tileRadius}px` }}
+                  >
+                    <LogoInline
+                      svgStr={preview}
+                      displaySize={56}
+                      className="overflow-hidden block"
+                      style={{ borderRadius: `${Math.round(56 * LOGO_RADIUS)}px` }}
+                    />
+                    {active && (
+                      <span
+                        className="absolute inset-0 flex items-center justify-center"
+                        style={{ backgroundColor: "rgba(0,0,0,0.3)", borderRadius: `${Math.round(56 * LOGO_RADIUS)}px` }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </Section>
 
-          <Divider />
+          <div className="mx-4 my-3 h-px bg-zinc-200" />
 
           {/* Download */}
           <Section>
+            <SectionHeader>다운로드</SectionHeader>
+
+            {/* Recommended: full pack */}
             <button
-              onClick={() => downloadSvg(buildLogoSvgStr(initial, symbol, color, radius, 512, gradientEnd), `${initial || "logo"}-icon.svg`)}
-              className="w-full py-3 rounded-2xl text-sm font-black bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-90 transition-opacity cursor-pointer mb-3"
+              onClick={() => handleDownloadPack("all", "seo-pack")}
+              className="w-full text-left rounded-2xl bg-zinc-900 text-white py-3.5 px-4 mb-3 hover:opacity-90 transition-opacity cursor-pointer flex items-start justify-between gap-3"
             >
-              SVG 다운로드 (512×512)
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-base">전체 받기</div>
+                <div className="text-[11px] opacity-70 mt-0.5 leading-relaxed break-keep">
+                  파비콘·iOS·PWA·소셜·manifest·head.html
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 mt-1">
+                <span className="text-[11px] opacity-70 font-medium">~200KB</span>
+                <DownloadIcon size={16} />
+              </div>
             </button>
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900">
-              <p className="text-[10px] text-zinc-400 mb-1 font-semibold uppercase tracking-wider">파비콘 CLI</p>
-              <code className="text-xs text-zinc-700 dark:text-zinc-300 font-mono">
-                npx m1kkit favicon --text={initial || "M"} --color={color}
-              </code>
+
+            {/* Use-case based subsets with descriptions */}
+            <p className="text-[11px] text-zinc-500 mb-2">또는 용도별로:</p>
+            <div className="space-y-1.5 mb-4">
+              {[
+                { id: "favicon" as const, title: "파비콘만",        desc: "브라우저 탭에 뜨는 작은 아이콘",        size: "~10KB"  },
+                { id: "ios"     as const, title: "iOS 홈스크린",    desc: "아이폰·아이패드 홈에 추가될 아이콘",     size: "~8KB"   },
+                { id: "pwa"     as const, title: "PWA 앱 아이콘",   desc: "앱처럼 설치 가능 + manifest",           size: "~80KB"  },
+                { id: "social"  as const, title: "소셜 공유 카드",   desc: "카톡·페북·슬랙 미리보기 OG 이미지",     size: "~120KB" },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => handleDownloadPack(c.id, c.id)}
+                  className="w-full text-left rounded-xl bg-zinc-50 hover:bg-zinc-100 px-3 py-2.5 transition-colors cursor-pointer flex items-center justify-between gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-zinc-900">{c.title}</div>
+                    <div className="text-[11px] text-zinc-500 mt-0.5 leading-snug">{c.desc}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 text-zinc-400">
+                    <span className="text-[10px] font-medium">{c.size}</span>
+                    <DownloadIcon size={14} />
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Individual files — collapsed by default for power users */}
+            <details className="group mb-3">
+              <summary className="text-xs text-zinc-500 font-medium cursor-pointer hover:text-zinc-700 list-none flex items-center gap-1 select-none py-1">
+                <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+                <span>개별 파일 한 개씩</span>
+              </summary>
+              <div className="grid grid-cols-2 gap-1.5 mt-2">
+                <button onClick={handleDownloadSvg} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
+                  <span className="text-xs font-bold text-zinc-700">SVG</span>
+                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~10KB</span><DownloadIcon size={12} /></span>
+                </button>
+                <button onClick={() => handleDownloadPng(32, "favicon-32")} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
+                  <span className="text-xs font-bold text-zinc-700">PNG 32</span>
+                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~1KB</span><DownloadIcon size={12} /></span>
+                </button>
+                <button onClick={() => handleDownloadPng(180, "apple-touch-180")} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
+                  <span className="text-xs font-bold text-zinc-700">PNG 180</span>
+                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~8KB</span><DownloadIcon size={12} /></span>
+                </button>
+                <button onClick={() => handleDownloadPng(192, "pwa-192")} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
+                  <span className="text-xs font-bold text-zinc-700">PNG 192</span>
+                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~10KB</span><DownloadIcon size={12} /></span>
+                </button>
+                <button onClick={() => handleDownloadPng(512, "pwa-512")} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer col-span-2">
+                  <span className="text-xs font-bold text-zinc-700">PNG 512</span>
+                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~40KB</span><DownloadIcon size={12} /></span>
+                </button>
+              </div>
+            </details>
+
+            {/* Where-to-put guide */}
+            <div className="mt-3 p-3 rounded-xl bg-zinc-50 break-keep">
+              <p className="text-[11px] text-zinc-600 font-bold mb-1">📂 어디에 넣어요?</p>
+              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                받은 파일을 프로젝트의 <code className="font-mono font-bold text-zinc-800">public/</code> (Vite·Next·CRA·Astro)
+                또는 <code className="font-mono font-bold text-zinc-800">static/</code> (Nuxt 2·Hugo) 폴더에 통째로 넣고,
+                <code className="font-mono font-bold text-zinc-800">head.html</code> 내용을 <code className="font-mono font-bold text-zinc-800">&lt;head&gt;</code>에 붙여넣으면 끝.
+              </p>
             </div>
           </Section>
 
           <div className="pb-6" />
+          </>
+          )}
         </AppShellContent>
-      </AppShell>
 
-      <ThemeDialog
-        open={themeOpen}
-        onClose={() => setThemeOpen(false)}
-        current={color}
-        onSelect={setColor}
-        dark={dark}
-        onDarkToggle={() => setDark((v) => !v)}
-      />
-    </>
+        <TabBar>
+          <Tab
+            active={view === "home"}
+            onClick={() => setView("home")}
+            icon={<HomeIcon />}
+            label="홈"
+            activeColor="#09090b"
+          />
+          <Tab
+            active={view === "create"}
+            onClick={() => setView("create")}
+            icon={<WandIcon />}
+            label="만들기"
+            activeColor="#09090b"
+          />
+        </TabBar>
+      </AppShell>
+    </Watermark>
   );
 }

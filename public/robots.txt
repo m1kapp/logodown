@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://logodown.m1k.app/sitemap.xml

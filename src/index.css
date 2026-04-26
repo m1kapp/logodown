@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 html {
   font-family: "Pretendard Variable", "Pretendard", system-ui, -apple-system, sans-serif, "Tossface";
 }
@@ -17,4 +15,22 @@ body {
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* Kit Tooltip renders via portal at document.body with fixed + z-[9999].
+   Force white text / dark bg so it stays correct regardless of ambient dark: variants. */
+body > .fixed.z-\[9999\] > div {
+  color: #fff;
+  background-color: #18181b;
+}
+
+/* Continuous horizontal marquee for home page logo showcase.
+   Track must render the items twice so the -50% shift loops seamlessly. */
+@keyframes lm-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.lm-marquee {
+  animation: lm-marquee 40s linear infinite;
+  width: max-content;
 }

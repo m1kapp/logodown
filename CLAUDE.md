@@ -2,7 +2,7 @@
 
 ## 프로젝트 개요
 
-`/Users/minho/IdeaProjects/m1kapp/logomaker/`
+`/Users/minho/IdeaProjects/m1kapp/logodown/`
 
 앱 아이콘과 파비콘을 브라우저에서 바로 만들 수 있는 단독 서비스.
 원래 `@m1kapp/kit` demo 앱의 탭 중 하나였다가 독립 프로젝트로 분리됨.
@@ -17,7 +17,7 @@
 ## 파일 구조
 
 ```
-logomaker/
+logodown/
 ├── svg/              ← 심볼별 standalone SVG 파일 (54개)
 │                       App.tsx의 LOGO_SYMBOLS와 path가 일부 다를 수 있음 (구버전)
 ├── src/
@@ -103,6 +103,6 @@ themeOpen // ThemeDialog 열림 여부
 ## 개발 시작
 
 ```bash
-cd /Users/minho/IdeaProjects/m1kapp/logomaker
+cd /Users/minho/IdeaProjects/m1kapp/logodown
 npm run dev
 ```
