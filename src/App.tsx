@@ -551,19 +551,23 @@ const LOGO_STYLES = [
   { id: "onWhiteGrad", label: "white +"  },
   { id: "onBlack",     label: "dark"     },
   { id: "onBlackGrad", label: "dark +"   },
+  { id: "colorWhite",     label: "color w"  },
+  { id: "colorWhiteGrad", label: "color w+" },
 ] as const;
 type StyleId = typeof LOGO_STYLES[number]["id"];
 
-/** 3 base style families × {solid, gradient} colorMode = 6 actual style ids. */
-type StyleBaseId = "color" | "onWhite" | "onBlack";
+/** 4 base style families × {solid, gradient} colorMode = 8 actual style ids. */
+type StyleBaseId = "color" | "colorWhite" | "onWhite" | "onBlack";
 const STYLE_BASES: { id: StyleBaseId; label: string }[] = [
-  { id: "color",   label: "컬러"    },
-  { id: "onWhite", label: "화이트" },
-  { id: "onBlack", label: "다크"    },
+  { id: "colorWhite", label: "흰 문자"   },
+  { id: "color",      label: "다크 문자" },
+  { id: "onWhite",    label: "화이트"    },
+  { id: "onBlack",    label: "다크"      },
 ];
 function resolveStyleId(base: StyleBaseId, mode: "solid" | "gradient"): StyleId {
-  if (base === "color")   return mode === "gradient" ? "gradient"    : "solid";
-  if (base === "onWhite") return mode === "gradient" ? "onWhiteGrad" : "onWhite";
+  if (base === "color")      return mode === "gradient" ? "gradient"      : "solid";
+  if (base === "colorWhite") return mode === "gradient" ? "colorWhiteGrad" : "colorWhite";
+  if (base === "onWhite")    return mode === "gradient" ? "onWhiteGrad"   : "onWhite";
   return mode === "gradient" ? "onBlackGrad" : "onBlack";
 }
 
@@ -578,12 +582,14 @@ function resolveStyle(styleId: StyleId, color: string): {
   const autoText = isLightHex(color) ? BLACK : "#ffffff";
   const end = autoGradientEnd(color);
   switch (styleId) {
-    case "solid":       return { bg: color, textColor: autoText };
-    case "gradient":    return { bg: color, bgGradEnd: end, textColor: autoText };
+    case "solid":       return { bg: color, textColor: "#09090b" };
+    case "gradient":    return { bg: color, bgGradEnd: end, textColor: "#09090b" };
     case "onWhite":     return { bg: WHITE, textColor: color };
     case "onWhiteGrad": return { bg: WHITE, textColor: color, textGradEnd: end };
-    case "onBlack":     return { bg: BLACK, textColor: color };
-    case "onBlackGrad": return { bg: BLACK, textColor: color, textGradEnd: end };
+    case "colorWhite":     return { bg: color, textColor: "#ffffff" };
+    case "colorWhiteGrad": return { bg: color, bgGradEnd: end, textColor: "#ffffff" };
+    case "onBlack":       return { bg: BLACK, textColor: color };
+    case "onBlackGrad":   return { bg: BLACK, textColor: color, textGradEnd: end };
   }
 }
 
@@ -875,7 +881,7 @@ export default function App() {
   const [pickerMode, setPickerMode] = useState<PickerMode>("symbol");
   const [color, setColor] = useState<string>("#09090b");
   const [colorMode, setColorMode] = useState<"solid" | "gradient">("solid");
-  const [styleBase, setStyleBase] = useState<StyleBaseId>("color");
+  const [styleBase, setStyleBase] = useState<StyleBaseId>("colorWhite");
   const style: StyleId = resolveStyleId(styleBase, colorMode);
   const toast = useToast();
 
@@ -1174,7 +1180,7 @@ export default function App() {
                       <button
                         key={name}
                         onClick={() => setColor(hex)}
-                        className={`relative w-12 h-12 rounded-xl cursor-pointer transition-all flex items-center justify-center ${color === hex ? "ring-2 ring-offset-2 ring-zinc-900/30 scale-95" : "hover:scale-95"}`}
+                        className={`relative w-12 h-12 rounded-xl cursor-pointer transition-all flex items-center justify-center ${color === hex ? "scale-90 shadow-md" : "hover:scale-95"}`}
                         style={swatchBg ? { background: swatchBg } : { backgroundColor: hex }}
                         title={name}
                       >
