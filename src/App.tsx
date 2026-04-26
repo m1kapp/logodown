@@ -3,7 +3,7 @@ import {
   Watermark,
   AppShell, AppShellHeader, AppShellContent,
   TabBar, Tab,
-  Section, SectionHeader,
+  Section,
   Tooltip, Badge, Button, ShareButton,
   useToast,
 } from "@m1kapp/kit";
@@ -442,8 +442,32 @@ function SymbolIcon({ sym, size = 18 }: { sym: typeof LOGO_SYMBOLS[0]; size?: nu
 function PickerHeader({ label, right }: { label: string; right?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between mb-3">
-      <span className="text-[11px] font-semibold text-zinc-400 uppercase">{label}</span>
+      <span className="text-[12px] font-bold text-zinc-900 tracking-tight">{label}</span>
       {right}
+    </div>
+  );
+}
+
+function SegmentControl<T extends string>({ options, value, onChange }: {
+  options: { id: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex p-0.5 rounded-lg bg-zinc-100">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          onClick={() => onChange(o.id)}
+          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+            value === o.id
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-400 hover:text-zinc-600"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -987,16 +1011,10 @@ export default function App() {
   };
 
   const cellCls = (active: boolean) =>
-    `w-11 h-11 flex items-center justify-center rounded-2xl font-black text-sm cursor-pointer transition-all select-none shrink-0 ${
+    `w-11 h-11 flex items-center justify-center rounded-xl font-bold text-sm cursor-pointer transition-all select-none shrink-0 ${
       active
-        ? "bg-zinc-900 text-white scale-95 shadow-md"
-        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-    }`;
-  const togglePillCls = (active: boolean) =>
-    `text-[10px] font-black px-2 py-0.5 rounded-lg transition-colors cursor-pointer ${
-      active
-        ? "bg-zinc-900 text-white"
-        : "bg-zinc-100 text-zinc-500"
+        ? "bg-zinc-900 text-white shadow-sm ring-2 ring-zinc-900/20"
+        : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
     }`;
 
   return (
@@ -1033,7 +1051,7 @@ export default function App() {
             </div>
           </Section>
 
-          <div className="mx-4 my-3 h-px bg-zinc-200" />
+          <div className="mx-4 my-4 h-px bg-zinc-100" />
 
           {/* Slot picker — front/back tabs + mode pills + grid */}
           <Section>
@@ -1043,52 +1061,29 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleRandomActiveSlot}
-                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 cursor-pointer transition-colors"
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 cursor-pointer transition-colors"
                     title={`${activeSlot === "front" ? "앞" : "뒤"} 슬롯만 랜덤`}
                   >
                     <DiceIcon size={14} />
                   </button>
-                  <div className="flex gap-0.5 p-0.5 rounded-lg bg-zinc-100">
-                    {(["front", "back"] as const).map((s) => {
-                      const active = activeSlot === s;
-                      return (
-                        <button
-                          key={s}
-                          onClick={() => setActiveSlot(s)}
-                          className={`px-2.5 py-0.5 rounded-md text-[10px] font-black transition-colors cursor-pointer ${
-                            active ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-700"
-                          }`}
-                        >
-                          {s === "front" ? "앞" : "뒤"}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <SegmentControl
+                    options={[{ id: "front" as const, label: "앞" }, { id: "back" as const, label: "뒤" }]}
+                    value={activeSlot}
+                    onChange={setActiveSlot}
+                  />
                 </div>
               }
             />
             <div className="flex items-center justify-between mb-3">
-              <div className="flex gap-0.5 p-0.5 rounded-lg bg-zinc-100">
-                {MODE_OPTIONS.map((m) => {
-                  const active = pickerMode === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => setPickerMode(m.id)}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-colors cursor-pointer ${
-                        active ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-700"
-                      }`}
-                    >
-                      {m.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="text-[11px] text-zinc-400 font-bold tabular-nums">
+              <SegmentControl
+                options={MODE_OPTIONS}
+                value={pickerMode}
+                onChange={setPickerMode}
+              />
+              <span className="text-[11px] text-zinc-400 font-medium tabular-nums">
                 {pickerMode === "symbol"
                   ? LOGO_SYMBOLS.filter((s) => s.id !== "none").length
                   : charsForMode(pickerMode).length}
-                <span className="text-zinc-300 font-medium">개</span>
               </span>
             </div>
             {pickerMode === "symbol" ? (() => {
@@ -1141,7 +1136,7 @@ export default function App() {
             })()}
           </Section>
 
-          <div className="mx-4 my-3 h-px bg-zinc-200" />
+          <div className="mx-4 my-4 h-px bg-zinc-100" />
 
           {/* Color */}
           <Section>
@@ -1151,30 +1146,19 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleRandomColor}
-                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 cursor-pointer transition-colors"
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 cursor-pointer transition-colors"
                     title="색상 랜덤"
                   >
                     <DiceIcon size={14} />
                   </button>
-                  <div className="flex gap-0.5 p-0.5 rounded-lg bg-zinc-100">
-                    {([
-                      { id: "solid",    label: "단색"       },
-                      { id: "gradient", label: "그라데이션" },
-                    ] as const).map((m) => {
-                      const active = colorMode === m.id;
-                      return (
-                        <button
-                          key={m.id}
-                          onClick={() => setColorMode(m.id)}
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-colors cursor-pointer ${
-                            active ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-700"
-                          }`}
-                        >
-                          {m.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <SegmentControl
+                    options={[
+                      { id: "solid" as const,    label: "단색"       },
+                      { id: "gradient" as const, label: "그라데이션" },
+                    ]}
+                    value={colorMode}
+                    onChange={setColorMode}
+                  />
                 </div>
               }
             />
@@ -1188,19 +1172,19 @@ export default function App() {
                     <button
                       key={name}
                       onClick={() => setColor(hex)}
-                      className={`relative w-11 h-11 rounded-2xl cursor-pointer transition-all flex items-center justify-center ${color === hex ? "scale-90" : "hover:scale-95"}`}
+                      className={`relative w-11 h-11 rounded-xl cursor-pointer transition-all flex items-center justify-center ${color === hex ? "ring-2 ring-offset-2 ring-zinc-900/30 scale-95" : "hover:scale-95"}`}
                       style={swatchBg ? { background: swatchBg } : { backgroundColor: hex }}
                       title={name}
                     >
                       {color === hex && (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isLightHex(hex) ? "#09090b" : "#ffffff"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isLightHex(hex) ? "#09090b" : "#ffffff"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       )}
                     </button>
                   );
                 })}
-                <label className="w-11 h-11 rounded-2xl cursor-pointer flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 transition-colors relative overflow-hidden">
+                <label className="w-11 h-11 rounded-xl cursor-pointer flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 transition-colors relative overflow-hidden">
                   <span className="text-zinc-400 text-lg font-black">+</span>
                   <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                 </label>
@@ -1208,11 +1192,11 @@ export default function App() {
             </div>
           </Section>
 
-          <div className="mx-4 my-3 h-px bg-zinc-200" />
+          <div className="mx-4 my-4 h-px bg-zinc-100" />
 
           {/* Style */}
           <Section>
-            <SectionHeader>스타일</SectionHeader>
+            <PickerHeader label="스타일" />
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {STYLE_BASES.map((sb) => {
                 const sid = resolveStyleId(sb.id, colorMode);
@@ -1253,94 +1237,99 @@ export default function App() {
             </div>
           </Section>
 
-          <div className="mx-4 my-3 h-px bg-zinc-200" />
+          <div className="mx-4 my-4 h-px bg-zinc-100" />
 
           {/* Download */}
           <Section>
-            <SectionHeader>다운로드</SectionHeader>
+            <PickerHeader label="다운로드" />
 
             {/* Recommended: full pack */}
             <button
               onClick={() => handleDownloadPack("all", "seo-pack")}
-              className="w-full text-left rounded-2xl bg-zinc-900 text-white py-3.5 px-4 mb-3 hover:opacity-90 transition-opacity cursor-pointer flex items-start justify-between gap-3"
+              className="w-full text-left rounded-2xl bg-zinc-900 text-white py-4 px-5 mb-4 hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-between gap-3"
             >
               <div className="flex-1 min-w-0">
                 <div className="font-black text-base">전체 받기</div>
-                <div className="text-[11px] opacity-70 mt-0.5 leading-relaxed break-keep">
+                <div className="text-[11px] opacity-60 mt-0.5 leading-relaxed break-keep">
                   파비콘·iOS·PWA·소셜·manifest·head.html
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0 mt-1">
-                <span className="text-[11px] opacity-70 font-medium">~200KB</span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[11px] opacity-50 font-medium">~200KB</span>
                 <DownloadIcon size={16} />
               </div>
             </button>
 
-            {/* Use-case based subsets with descriptions */}
-            <p className="text-[11px] text-zinc-500 mb-2">또는 용도별로:</p>
-            <div className="space-y-1.5 mb-4">
-              {[
-                { id: "favicon" as const, title: "파비콘만",        desc: "브라우저 탭에 뜨는 작은 아이콘",        size: "~10KB"  },
-                { id: "ios"     as const, title: "iOS 홈스크린",    desc: "아이폰·아이패드 홈에 추가될 아이콘",     size: "~8KB"   },
-                { id: "pwa"     as const, title: "PWA 앱 아이콘",   desc: "앱처럼 설치 가능 + manifest",           size: "~80KB"  },
-                { id: "social"  as const, title: "소셜 공유 카드",   desc: "카톡·페북·슬랙 미리보기 OG 이미지",     size: "~120KB" },
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => handleDownloadPack(c.id, c.id)}
-                  className="w-full text-left rounded-xl bg-zinc-50 hover:bg-zinc-100 px-3 py-2.5 transition-colors cursor-pointer flex items-center justify-between gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-zinc-900">{c.title}</div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5 leading-snug">{c.desc}</div>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0 text-zinc-400">
-                    <span className="text-[10px] font-medium">{c.size}</span>
-                    <DownloadIcon size={14} />
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Individual files — collapsed by default for power users */}
-            <details className="group mb-3">
-              <summary className="text-xs text-zinc-500 font-medium cursor-pointer hover:text-zinc-700 list-none flex items-center gap-1 select-none py-1">
-                <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-                <span>개별 파일 한 개씩</span>
+            {/* Collapsed: use-case subsets + individual files */}
+            <details className="group">
+              <summary className="text-[12px] text-zinc-400 font-medium cursor-pointer hover:text-zinc-600 list-none flex items-center gap-1.5 select-none py-2 transition-colors">
+                <svg className="w-3 h-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L9 6L4.5 10V2Z"/></svg>
+                <span>용도별 · 개별 다운로드</span>
               </summary>
-              <div className="grid grid-cols-2 gap-1.5 mt-2">
-                <button onClick={handleDownloadSvg} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
-                  <span className="text-xs font-bold text-zinc-700">SVG</span>
-                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~10KB</span><DownloadIcon size={12} /></span>
-                </button>
-                <button onClick={() => handleDownloadPng(32, "favicon-32")} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
-                  <span className="text-xs font-bold text-zinc-700">PNG 32</span>
-                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~1KB</span><DownloadIcon size={12} /></span>
-                </button>
-                <button onClick={() => handleDownloadPng(180, "apple-touch-180")} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
-                  <span className="text-xs font-bold text-zinc-700">PNG 180</span>
-                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~8KB</span><DownloadIcon size={12} /></span>
-                </button>
-                <button onClick={() => handleDownloadPng(192, "pwa-192")} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
-                  <span className="text-xs font-bold text-zinc-700">PNG 192</span>
-                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~10KB</span><DownloadIcon size={12} /></span>
-                </button>
-                <button onClick={() => handleDownloadPng(512, "pwa-512")} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer col-span-2">
-                  <span className="text-xs font-bold text-zinc-700">PNG 512</span>
-                  <span className="flex items-center gap-1 text-zinc-400"><span className="text-[10px]">~40KB</span><DownloadIcon size={12} /></span>
-                </button>
+              <div className="pt-2 space-y-4">
+                {/* Use-case based subsets */}
+                <div className="space-y-1.5">
+                  {[
+                    { id: "favicon" as const, title: "파비콘만",        desc: "브라우저 탭에 뜨는 작은 아이콘",        size: "~10KB"  },
+                    { id: "ios"     as const, title: "iOS 홈스크린",    desc: "아이폰·아이패드 홈에 추가될 아이콘",     size: "~8KB"   },
+                    { id: "pwa"     as const, title: "PWA 앱 아이콘",   desc: "앱처럼 설치 가능 + manifest",           size: "~80KB"  },
+                    { id: "social"  as const, title: "소셜 공유 카드",   desc: "카톡·페북·슬랙 미리보기 OG 이미지",     size: "~120KB" },
+                  ].map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => handleDownloadPack(c.id, c.id)}
+                      className="w-full text-left rounded-xl bg-zinc-50 hover:bg-zinc-100 px-3.5 py-2.5 transition-colors cursor-pointer flex items-center justify-between gap-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-bold text-zinc-900">{c.title}</div>
+                        <div className="text-[11px] text-zinc-400 mt-0.5 leading-snug">{c.desc}</div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 text-zinc-300">
+                        <span className="text-[10px] font-medium">{c.size}</span>
+                        <DownloadIcon size={13} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Individual files */}
+                <div>
+                  <div className="text-[11px] text-zinc-400 font-medium mb-2">개별 파일</div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button onClick={handleDownloadSvg} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
+                      <span className="text-[12px] font-semibold text-zinc-700">SVG</span>
+                      <span className="flex items-center gap-1 text-zinc-300"><span className="text-[10px]">~10KB</span><DownloadIcon size={12} /></span>
+                    </button>
+                    <button onClick={() => handleDownloadPng(32, "favicon-32")} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
+                      <span className="text-[12px] font-semibold text-zinc-700">PNG 32</span>
+                      <span className="flex items-center gap-1 text-zinc-300"><span className="text-[10px]">~1KB</span><DownloadIcon size={12} /></span>
+                    </button>
+                    <button onClick={() => handleDownloadPng(180, "apple-touch-180")} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
+                      <span className="text-[12px] font-semibold text-zinc-700">PNG 180</span>
+                      <span className="flex items-center gap-1 text-zinc-300"><span className="text-[10px]">~8KB</span><DownloadIcon size={12} /></span>
+                    </button>
+                    <button onClick={() => handleDownloadPng(192, "pwa-192")} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer">
+                      <span className="text-[12px] font-semibold text-zinc-700">PNG 192</span>
+                      <span className="flex items-center gap-1 text-zinc-300"><span className="text-[10px]">~10KB</span><DownloadIcon size={12} /></span>
+                    </button>
+                    <button onClick={() => handleDownloadPng(512, "pwa-512")} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer col-span-2">
+                      <span className="text-[12px] font-semibold text-zinc-700">PNG 512</span>
+                      <span className="flex items-center gap-1 text-zinc-300"><span className="text-[10px]">~40KB</span><DownloadIcon size={12} /></span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Where-to-put guide */}
+                <div className="p-3.5 rounded-xl bg-zinc-50 break-keep">
+                  <p className="text-[11px] text-zinc-500 font-semibold mb-1">어디에 넣어요?</p>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    받은 파일을 프로젝트의 <code className="font-mono font-semibold text-zinc-600">public/</code> (Vite·Next·CRA·Astro)
+                    또는 <code className="font-mono font-semibold text-zinc-600">static/</code> (Nuxt 2·Hugo) 폴더에 통째로 넣고,
+                    <code className="font-mono font-semibold text-zinc-600">head.html</code> 내용을 <code className="font-mono font-semibold text-zinc-600">&lt;head&gt;</code>에 붙여넣으면 끝.
+                  </p>
+                </div>
               </div>
             </details>
-
-            {/* Where-to-put guide */}
-            <div className="mt-3 p-3 rounded-xl bg-zinc-50 break-keep">
-              <p className="text-[11px] text-zinc-600 font-bold mb-1">📂 어디에 넣어요?</p>
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
-                받은 파일을 프로젝트의 <code className="font-mono font-bold text-zinc-800">public/</code> (Vite·Next·CRA·Astro)
-                또는 <code className="font-mono font-bold text-zinc-800">static/</code> (Nuxt 2·Hugo) 폴더에 통째로 넣고,
-                <code className="font-mono font-bold text-zinc-800">head.html</code> 내용을 <code className="font-mono font-bold text-zinc-800">&lt;head&gt;</code>에 붙여넣으면 끝.
-              </p>
-            </div>
           </Section>
 
           <div className="pb-6" />
