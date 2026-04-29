@@ -79,16 +79,18 @@ const LOGO_SYMBOLS: Array<{ id: string; label: string; d?: string | string[]; vb
   ...LUCIDE_SYMBOLS,
 ];
 
+const SYMBOL_MAP = new Map(LOGO_SYMBOLS.map((s) => [s.id, s]));
+
+const SHADOW_PARAMS = [
+  null,
+  { dxR: 0.004, dyR: 0.008, blurR: 0.016, opacity: 0.20 },
+  { dxR: 0.008, dyR: 0.014, blurR: 0.028, opacity: 0.30 },
+  { dxR: 0.012, dyR: 0.020, blurR: 0.040, opacity: 0.40 },
+] as const;
+
 /* ══════════════════════════════════════════════
    Logo SVG builder
 ══════════════════════════════════════════════ */
-function invertHex(hex: string): string {
-  const h = hex.replace("#", "").padEnd(6, "0");
-  const r = (255 - parseInt(h.slice(0, 2), 16)).toString(16).padStart(2, "0");
-  const g = (255 - parseInt(h.slice(2, 4), 16)).toString(16).padStart(2, "0");
-  const b = (255 - parseInt(h.slice(4, 6), 16)).toString(16).padStart(2, "0");
-  return `#${r}${g}${b}`;
-}
 
 function hexToHsl(hex: string): [number, number, number] {
   const h = hex.replace("#", "").padEnd(6, "0");
@@ -138,7 +140,7 @@ type Slot = { kind: SlotKind; value: string };
 
 function isSlotFilled(s: Slot): boolean {
   if (s.kind === "char") return !!s.value;
-  const sym = LOGO_SYMBOLS.find((x) => x.id === s.value);
+  const sym = SYMBOL_MAP.get(s.value);
   return !!sym && s.value !== "none" && !!(sym.d || sym.isRing);
 }
 
@@ -207,17 +209,19 @@ function renderTextSlot(text: string, cx: number, cy: number, E: number, fgFill:
   return `<text x="${cx.toFixed(1)}" y="${textY.toFixed(1)}" font-family="${fontFamily}" font-size="${fontSize.toFixed(1)}" font-weight="${fontWeight}"${lsAttr} fill="${fgFill}" text-anchor="middle" dominant-baseline="central">${displayText}</text>`;
 }
 
-function renderSymbolSlot(symbolId: string, cx: number, cy: number, E: number, fgFill: string, ringInner: string): string {
-  const sym = LOGO_SYMBOLS.find((x) => x.id === symbolId);
+function renderSymbolSlot(symbolId: string, cx: number, cy: number, E: number, fgFill: string, ringInner: string, userRotate = 0, userScale = 1): string {
+  const sym = SYMBOL_MAP.get(symbolId);
   if (!sym || symbolId === "none" || (!sym.d && !sym.isRing)) return "";
+  const sE = E * userScale;
   if (sym.isRing) {
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(E*0.50).toFixed(1)}" fill="${fgFill}"/><circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(E*0.29).toFixed(1)}" fill="${ringInner}"/>`;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(sE*0.50).toFixed(1)}" fill="${fgFill}"/><circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(sE*0.29).toFixed(1)}" fill="${ringInner}"/>`;
   }
   const vb = sym.vb ?? 100;
-  const sc = E / vb;
+  const sc = sE / vb;
   const tx = cx - (vb/2)*sc, ty = cy - (vb/2)*sc;
   const fr = sym.fillRule ? ` fill-rule="${sym.fillRule}"` : "";
-  const rot = sym.rotate != null ? ` transform="rotate(${sym.rotate}, ${(vb/2)}, ${(vb/2)})"` : "";
+  const totalRot = (sym.rotate ?? 0) + userRotate;
+  const rot = totalRot !== 0 ? ` transform="rotate(${totalRot}, ${(vb/2)}, ${(vb/2)})"` : "";
   const pathAttrs = sym.stroke
     ? `fill="none" stroke="${fgFill}" stroke-width="${sym.strokeWidth ?? 2}" stroke-linecap="round" stroke-linejoin="round"`
     : `fill="${fgFill}"${fr}`;
@@ -235,7 +239,7 @@ function buildLogoSvgStr(
   gradientEnd?: string,
   textColorOverride?: string,
   textGradientEnd?: string,
-  options?: { textRenderer?: TextRenderer; embedFonts?: boolean },
+  options?: { textRenderer?: TextRenderer; embedFonts?: boolean; frontRotate?: number; backRotate?: number; frontScale?: number; backScale?: number; shadow?: number; uid?: string },
 ): string {
   const r = Math.round(size * radius);
   const tColor = textColorOverride ?? (isLightHex(bg) ? "#09090b" : "#ffffff");
@@ -244,27 +248,24 @@ function buildLogoSvgStr(
   const gap = size * 0.06;
 
   // Fall back to "A" if nothing filled.
-  const filled: Slot[] = [];
-  if (isSlotFilled(front)) filled.push(front);
-  if (isSlotFilled(back)) filled.push(back);
-  if (filled.length === 0) filled.push({ kind: "char", value: "A" });
+  const slots: { slot: Slot; rotate: number; scale: number }[] = [];
+  if (isSlotFilled(front)) slots.push({ slot: front, rotate: options?.frontRotate ?? 0, scale: options?.frontScale ?? 1 });
+  if (isSlotFilled(back)) slots.push({ slot: back, rotate: options?.backRotate ?? 0, scale: options?.backScale ?? 1 });
+  if (slots.length === 0) slots.push({ slot: { kind: "char", value: "A" }, rotate: 0, scale: 1 });
 
-  const slotCount = filled.length;
+  const slotCount = slots.length;
   const groupW = slotCount === 2 ? E + gap + E : E;
   const groupLeft = (size - groupW) / 2;
-  const cxs = filled.map((_, i) => groupLeft + E / 2 + i * (E + gap));
+  const cxs = slots.map((_, i) => groupLeft + E / 2 + i * (E + gap));
 
   const useGrad = !!gradientEnd;
   const useTextGrad = !!textGradientEnd;
   const textRenderer = options?.textRenderer ?? renderTextSlot;
-  // When using path renderer (export mode), no @import needed since glyphs
-  // are already embedded as <path> data.
   const embedFontImports = options?.embedFonts ?? !options?.textRenderer;
 
-  // Detect font requirements across all char slots.
-  const charSlots = filled.filter((s) => s.kind === "char");
-  const needsPacifico = charSlots.some((s) => /^[a-z]+$/.test(s.value));
-  const needsPretendard = charSlots.some((s) => /[가-힣]/.test(s.value));
+  const charSlots = slots.filter((s) => s.slot.kind === "char");
+  const needsPacifico = charSlots.some((s) => /^[a-z]+$/.test(s.slot.value));
+  const needsPretendard = charSlots.some((s) => /[가-힣]/.test(s.slot.value));
 
   const fontImports = embedFontImports
     ? [
@@ -273,32 +274,42 @@ function buildLogoSvgStr(
       ].filter(Boolean).join("")
     : "";
 
+  const uid = options?.uid ?? Math.random().toString(36).slice(2, 8);
+  const shadowLevel = options?.shadow ?? 0;
+  const sp = SHADOW_PARAMS[shadowLevel];
+  const shadowCfg = sp ? {
+    dx: size * sp.dxR, dy: size * sp.dyR, blur: size * sp.blurR, opacity: sp.opacity,
+  } : null;
   const defsInner = [
     fontImports,
-    useGrad ? `<linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="${gradientEnd}"/></linearGradient>` : "",
-    useTextGrad ? `<linearGradient id="tg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${tColor}"/><stop offset="100%" stop-color="${textGradientEnd}"/></linearGradient>` : "",
+    useGrad ? `<linearGradient id="lg${uid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="${gradientEnd}"/></linearGradient>` : "",
+    useTextGrad ? `<linearGradient id="tg${uid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${tColor}"/><stop offset="100%" stop-color="${textGradientEnd}"/></linearGradient>` : "",
+    shadowCfg ? `<filter id="ds${uid}"><feDropShadow dx="${shadowCfg.dx.toFixed(1)}" dy="${shadowCfg.dy.toFixed(1)}" stdDeviation="${shadowCfg.blur.toFixed(1)}" flood-opacity="${shadowCfg.opacity}"/></filter>` : "",
   ].filter(Boolean).join("");
   const defsEl = defsInner ? `<defs>${defsInner}</defs>` : "";
-  const bgFill = useGrad ? "url(#lg)" : bg;
-  const fgFill = useTextGrad ? "url(#tg)" : tColor;
-  const borderColor = invertHex(bg);
+  const bgFill = useGrad ? `url(#lg${uid})` : bg;
+  const fgFill = useTextGrad ? `url(#tg${uid})` : tColor;
   const ringInner = gradientEnd ?? bg;
 
-  const slotElements = filled.map((slot, i) => {
+  const slotElements = slots.map(({ slot, rotate: rot, scale: sc }, i) => {
     const cx = cxs[i];
-    return slot.kind === "char"
+    const inner = slot.kind === "char"
       ? textRenderer(slot.value, cx, cy, E, fgFill)
-      : renderSymbolSlot(slot.value, cx, cy, E, fgFill, ringInner);
+      : renderSymbolSlot(slot.value, cx, cy, E, fgFill, ringInner, rot, sc);
+    if (slot.kind === "char" && (rot !== 0 || sc !== 1)) {
+      const transforms: string[] = [];
+      if (rot !== 0) transforms.push(`rotate(${rot}, ${cx.toFixed(1)}, ${cy.toFixed(1)})`);
+      if (sc !== 1) transforms.push(`translate(${cx.toFixed(1)}, ${cy.toFixed(1)}) scale(${sc}) translate(${(-cx).toFixed(1)}, ${(-cy).toFixed(1)})`);
+      return `<g transform="${transforms.join(" ")}">${inner}</g>`;
+    }
+    return inner;
   }).join("");
-
-  const bw = Math.max(1, size * 0.008);
-  const borderEl = `<rect x="${bw/2}" y="${bw/2}" width="${size-bw}" height="${size-bw}" rx="${Math.max(0, r - bw/2)}" fill="none" stroke="${borderColor}" stroke-width="${bw}" stroke-opacity="0.25"/>`;
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`,
     defsEl,
     `<rect width="${size}" height="${size}" rx="${r}" fill="${bgFill}"/>`,
-    borderEl, slotElements,
+    shadowCfg ? `<g filter="url(#ds${uid})">${slotElements}</g>` : slotElements,
     `</svg>`,
   ].join("");
 }
@@ -313,13 +324,14 @@ async function buildLogoSvgStrForExport(
   gradientEnd?: string,
   textColorOverride?: string,
   textGradientEnd?: string,
+  tweaks?: { frontRotate?: number; backRotate?: number; frontScale?: number; backScale?: number; shadow?: number },
 ): Promise<string> {
   const fonts = await loadExportFonts();
   const renderer = makePathTextRenderer(fonts);
   return buildLogoSvgStr(
     front, back, bg, radius, size,
     gradientEnd, textColorOverride, textGradientEnd,
-    { textRenderer: renderer, embedFonts: false },
+    { textRenderer: renderer, embedFonts: false, ...tweaks },
   );
 }
 
@@ -332,6 +344,7 @@ async function buildLogoSvgStrForMaskable(
   gradientEnd?: string,
   textColorOverride?: string,
   textGradientEnd?: string,
+  tweaks?: { frontRotate?: number; backRotate?: number; frontScale?: number; backScale?: number; shadow?: number },
 ): Promise<string> {
   const fonts = await loadExportFonts();
   const renderer = makePathTextRenderer(fonts);
@@ -340,10 +353,9 @@ async function buildLogoSvgStrForMaskable(
   const svg = buildLogoSvgStr(
     front, back, bg, 0, size,
     gradientEnd, textColorOverride, textGradientEnd,
-    { textRenderer: renderer, embedFonts: false },
+    { textRenderer: renderer, embedFonts: false, ...tweaks },
   );
-  // Drop the inner 0.25-opacity border rect (it would land at 80% of the masked area).
-  return svg.replace(/<rect [^/]*stroke-opacity="0\.25"[^/]*\/>/, "");
+  return svg;
 }
 
 function downloadSvg(svgStr: string, filename: string) {
@@ -582,8 +594,8 @@ function resolveStyle(styleId: StyleId, color: string): {
   const autoText = isLightHex(color) ? BLACK : "#ffffff";
   const end = autoGradientEnd(color);
   switch (styleId) {
-    case "solid":       return { bg: color, textColor: "#09090b" };
-    case "gradient":    return { bg: color, bgGradEnd: end, textColor: "#09090b" };
+    case "solid":       return { bg: color, textColor: autoText };
+    case "gradient":    return { bg: color, bgGradEnd: end, textColor: autoText };
     case "onWhite":     return { bg: WHITE, textColor: color };
     case "onWhiteGrad": return { bg: WHITE, textColor: color, textGradEnd: end };
     case "colorWhite":     return { bg: color, textColor: "#ffffff" };
@@ -598,23 +610,40 @@ type ShowcaseLogo = {
   back: Slot;
   color: string;
   style: StyleId;
+  fr?: number; // front rotate
+  br?: number; // back rotate
+  fs?: number; // front scale
+  bs?: number; // back scale
 };
 
 // Hand-picked combinations that showcase the tool's range.
 // Color hues are intentionally distributed across the spectrum.
+// fr/br = front/back rotate, fs/bs = front/back scale
 const HOME_SHOWCASE: ShowcaseLogo[] = [
-  { front: { kind: "char", value: "M"  }, back: { kind: "symbol", value: "down"     }, color: "#09090b", style: "solid"        }, // 블랙 · Markdown
-  { front: { kind: "char", value: "N"  }, back: { kind: "symbol", value: "right"    }, color: "#3b82f6", style: "gradient"     }, // 블루
-  { front: { kind: "char", value: "V"  }, back: { kind: "symbol", value: "triangle" }, color: "#10b981", style: "onWhite"      }, // 에메랄드
-  { front: { kind: "char", value: "별" }, back: { kind: "symbol", value: "star"     }, color: "#eab308", style: "onBlack"      }, // 옐로우
-  { front: { kind: "char", value: "S"  }, back: { kind: "symbol", value: "zap"      }, color: "#7c3aed", style: "gradient"     }, // 바이올렛
-  { front: { kind: "char", value: "한" }, back: { kind: "symbol", value: "circle"   }, color: "#ef4444", style: "onWhite"      }, // 레드
-  { front: { kind: "char", value: "D"  }, back: { kind: "symbol", value: "diamond"  }, color: "#0d9488", style: "solid"        }, // 틸
-  { front: { kind: "char", value: "a"  }, back: { kind: "symbol", value: "sparkle"  }, color: "#fb7185", style: "onWhite"      }, // 로즈
-  { front: { kind: "char", value: "99" }, back: { kind: "symbol", value: "check"    }, color: "#84cc16", style: "solid"        }, // 라임
-  { front: { kind: "char", value: "꿈" }, back: { kind: "symbol", value: "meteor2"  }, color: "#d946ef", style: "onBlackGrad"  }, // 푸시아
-  { front: { kind: "char", value: "F"  }, back: { kind: "symbol", value: "flame"    }, color: "#f97316", style: "solid"        }, // 오렌지
-  { front: { kind: "symbol", value: "layers" }, back: { kind: "char", value: "k"    }, color: "#06b6d4", style: "onWhiteGrad"  }, // 사이안 · 심볼이 앞
+  // 1. Markdown 아이덴티티 — 반드시 첫 번째
+  { front: { kind: "char", value: "M"  }, back: { kind: "symbol", value: "down"     }, color: "#09090b", style: "solid"                                 },
+  // 2. 로켓 발사 — 45° 기울어진 로켓, 그라데이션
+  { front: { kind: "char", value: "N"  }, back: { kind: "symbol", value: "rocket"   }, color: "#3b82f6", style: "gradient",     br: 45, bs: 1.10         },
+  // 3. 심볼 앞 배치 — 톱니바퀴 + 이니셜, 화이트 위 컬러
+  { front: { kind: "symbol", value: "settings" }, back: { kind: "char", value: "k"  }, color: "#0d9488", style: "onWhiteGrad",  fr: 0, fs: 1.15          },
+  // 4. 한글 · 별 — 다크 배경에 골드
+  { front: { kind: "char", value: "별" }, back: { kind: "symbol", value: "star"     }, color: "#eab308", style: "onBlack",      bs: 1.10                 },
+  // 5. 번개 — 바이올렛 그라데
+  { front: { kind: "char", value: "S"  }, back: { kind: "symbol", value: "zap"      }, color: "#7c3aed", style: "gradient",     bs: 1.15                 },
+  // 6. 망치 — 오렌지, 살짝 기울임
+  { front: { kind: "char", value: "B"  }, back: { kind: "symbol", value: "hammer"   }, color: "#f97316", style: "solid",        br: 315                  },
+  // 7. 다이아몬드 — 틸, 45° 회전으로 정사각형처럼
+  { front: { kind: "char", value: "D"  }, back: { kind: "symbol", value: "diamond"  }, color: "#06b6d4", style: "solid",        br: 45                   },
+  // 8. 소문자 필기체 + 깃털 — 로즈, 우아하게
+  { front: { kind: "char", value: "a"  }, back: { kind: "symbol", value: "feather"  }, color: "#fb7185", style: "onWhite",      br: 315, bs: 1.10        },
+  // 9. 검 — 다크 배경에 퍼플, 대각선
+  { front: { kind: "char", value: "X"  }, back: { kind: "symbol", value: "sword"    }, color: "#a855f7", style: "onBlackGrad",  br: 0, bs: 1.15          },
+  // 10. 한글 꿈 + 혜성 — 푸시아
+  { front: { kind: "char", value: "꿈" }, back: { kind: "symbol", value: "meteor2"  }, color: "#d946ef", style: "onBlackGrad",  bs: 1.05                 },
+  // 11. 불꽃 + 스케일업 — 레드
+  { front: { kind: "char", value: "F"  }, back: { kind: "symbol", value: "flame"    }, color: "#ef4444", style: "gradient",     bs: 1.20                 },
+  // 12. 렌치 — 라임, 공구 느낌
+  { front: { kind: "symbol", value: "wrench" }, back: { kind: "char", value: "42"   }, color: "#84cc16", style: "solid",        fr: 315, fs: 1.10        },
 ];
 
 function DiceIcon({ size = 16 }: { size?: number }) {
@@ -631,7 +660,7 @@ function DiceIcon({ size = 16 }: { size?: number }) {
 }
 
 // Row-major 2-row grid with horizontal scroll: fills row 1 fully, then row 2.
-function gridStyle(itemCount: number, cellSize = "3rem"): React.CSSProperties {
+function gridStyle(itemCount: number, cellSize = "2.5rem"): React.CSSProperties {
   const cols = Math.max(1, Math.ceil(itemCount / 2));
   return {
     display: "grid",
@@ -686,7 +715,8 @@ function HomeView({ onStart }: { onStart: () => void }) {
   }, []);
   const renderCfg = (c: ShowcaseLogo, size: number) => {
     const s = resolveStyle(c.style, c.color);
-    return buildLogoSvgStr(c.front, c.back, s.bg, LOGO_RADIUS, size, s.bgGradEnd, s.textColor, s.textGradEnd);
+    return buildLogoSvgStr(c.front, c.back, s.bg, LOGO_RADIUS, size, s.bgGradEnd, s.textColor, s.textGradEnd,
+      { frontRotate: c.fr, backRotate: c.br, frontScale: c.fs, backScale: c.bs });
   };
 
   const initialCount = ALPHABET_UPPER.length + ALPHABET_LOWER.length + NUMBERS.length + HANGUL_CHARS.length;
@@ -722,35 +752,49 @@ function HomeView({ onStart }: { onStart: () => void }) {
         <Button variant="dark" full onClick={onStart} className="py-3 mb-3">
           1분 만에 로고 만들기 →
         </Button>
-        <div className="flex flex-wrap gap-1.5 justify-center mb-3">
-          <Badge variant="default" size="sm">이니셜 {initialCount}</Badge>
-          <Badge variant="default" size="sm">심볼 {symbolCount}</Badge>
-          <Badge variant="default" size="sm">SVG · PNG · ICO</Badge>
-        </div>
         {(() => {
-          const slotOpts = initialCount + symbolCount;          // 291 = 192 + 99
-          const styleCount = 3;                                 // 컬러 / 화이트 / 다크
+          const slotOpts = initialCount + symbolCount;
+          const rotateCount = 8;                                // 0° ~ 315°
+          const scaleCount = 5;                                 // 1x ~ 1.20x
+          const slotCombos = slotOpts * rotateCount * scaleCount;
+          const styleCount = 4;                                 // 흰문자 / 다크문자 / 화이트 / 다크
           const modeCount = 2;                                  // 단색 / 그라데
           const paletteColors = LOGO_COLORS.length;             // 24
-          const total = slotOpts * slotOpts * styleCount * modeCount * paletteColors;
+          const total = slotCombos * slotCombos * styleCount * modeCount * paletteColors;
+          const billion = total / 1_0000_0000;
           return (
             <div className="rounded-2xl bg-zinc-50 p-3 break-keep">
-              <div className="text-[11px] text-zinc-500 mb-2 leading-relaxed text-center">
-                <span className="font-bold text-zinc-700">앞·뒤 슬롯</span>
-                <span className="text-zinc-400"> ({slotOpts}²) </span>×
-                <span className="font-bold text-zinc-700"> 스타일</span>
-                <span className="text-zinc-400"> ({styleCount}) </span>×
-                <span className="font-bold text-zinc-700"> 모드</span>
-                <span className="text-zinc-400"> ({modeCount}) </span>×
-                <span className="font-bold text-zinc-700"> 색상</span>
-                <span className="text-zinc-400"> ({paletteColors})</span>
+              <div className="text-[11px] text-zinc-500 mb-2 leading-relaxed text-center space-y-0.5">
+                <div>
+                  <span className="font-bold text-zinc-700">이니셜</span>
+                  <span className="text-zinc-400"> ({initialCount}) </span>+
+                  <span className="font-bold text-zinc-700"> 심볼</span>
+                  <span className="text-zinc-400"> ({symbolCount}) </span>×
+                  <span className="font-bold text-zinc-700"> 회전</span>
+                  <span className="text-zinc-400"> ({rotateCount}) </span>×
+                  <span className="font-bold text-zinc-700"> 크기</span>
+                  <span className="text-zinc-400"> ({scaleCount})</span>
+                  <span className="text-zinc-400"> = {slotCombos.toLocaleString()} / 슬롯</span>
+                </div>
+                <div>
+                  <span className="font-bold text-zinc-700">앞·뒤</span>
+                  <span className="text-zinc-400"> ({slotCombos.toLocaleString()})² </span>×
+                  <span className="font-bold text-zinc-700"> 스타일</span>
+                  <span className="text-zinc-400"> ({styleCount}) </span>×
+                  <span className="font-bold text-zinc-700"> 모드</span>
+                  <span className="text-zinc-400"> ({modeCount}) </span>×
+                  <span className="font-bold text-zinc-700"> 색상</span>
+                  <span className="text-zinc-400"> ({paletteColors})</span>
+                </div>
               </div>
               <div className="text-lg font-black text-zinc-900 text-center tabular-nums">
-                {total.toLocaleString()}<span className="text-zinc-500 text-sm font-bold">+ 가지</span>
+                {billion >= 1
+                  ? <>{billion.toFixed(1)}<span className="text-zinc-500 text-sm font-bold">억 가지</span></>
+                  : <>{total.toLocaleString()}<span className="text-zinc-500 text-sm font-bold">+ 가지</span></>
+                }
               </div>
               <div className="text-[10px] text-zinc-400 mt-2 text-center leading-relaxed break-keep">
-                슬롯마다 <strong>이니셜 {initialCount} + 심볼 {symbolCount} = {slotOpts}종</strong> 중 선택<br />
-                스타일 {styleCount}종(컬러·화이트·다크) · 모드 {modeCount}종(단색·그라데) · 팔레트 {paletteColors}색
+                두 슬롯 각각 자유 조합, 커스텀 hex 색상까지 포함하면 사실상 무한
               </div>
             </div>
           );
@@ -882,14 +926,22 @@ export default function App() {
   const [color, setColor] = useState<string>("#09090b");
   const [colorMode, setColorMode] = useState<"solid" | "gradient">("solid");
   const [styleBase, setStyleBase] = useState<StyleBaseId>("colorWhite");
+  const [frontRotate, setFrontRotate] = useState(0);
+  const [backRotate, setBackRotate] = useState(0);
+  const [frontScale, setFrontScale] = useState(1);
+  const [backScale, setBackScale] = useState(1);
+  const [shadow, setShadow] = useState(0);
+  const [ogTitle, setOgTitle] = useState("logodown");
+  const [ogDesc, setOgDesc] = useState("Make logos like markdown logo");
   const style: StyleId = resolveStyleId(styleBase, colorMode);
   const toast = useToast();
 
   const scheme = resolveStyle(style, color);
-  const renderLogo = (size: number) =>
+  const renderLogo = (size: number, opts?: { textRenderer?: TextRenderer; embedFonts?: boolean }) =>
     buildLogoSvgStr(
       front, back, scheme.bg, LOGO_RADIUS, size,
       scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd,
+      { ...opts, frontRotate, backRotate, frontScale, backScale, shadow, uid: "p" },
     );
   const logoSvgStr = renderLogo(200);
   const rPx = (s: number) => Math.round(s * LOGO_RADIUS);
@@ -946,10 +998,11 @@ export default function App() {
     "logo"
   ).toLowerCase();
 
+  const tweaks = { frontRotate, backRotate, frontScale, backScale, shadow };
   const renderExportLogo = (size: number) =>
     buildLogoSvgStrForExport(
       front, back, scheme.bg, LOGO_RADIUS, size,
-      scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd,
+      scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, tweaks,
     );
 
   const handleDownloadSvg = async () => {
@@ -981,12 +1034,12 @@ export default function App() {
       const [iconSvg, maskableSvg] = await Promise.all([
         buildLogoSvgStrForExport(
           front, back, scheme.bg, LOGO_RADIUS, 512,
-          scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd,
+          scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, tweaks,
         ),
         needsMaskable
           ? buildLogoSvgStrForMaskable(
               front, back, scheme.bg, 512,
-              scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd,
+              scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, tweaks,
             )
           : Promise.resolve(""),
       ]);
@@ -994,8 +1047,8 @@ export default function App() {
       const zipBytes = await buildSeoPack({
         iconSvg,
         maskableSvg,
-        brandName: "logodown",
-        slogan: "Make logos like markdown logo",
+        brandName: ogTitle,
+        slogan: ogDesc,
         bgColor: scheme.bg,
         bgGradEnd: scheme.bgGradEnd,
         textColor,
@@ -1017,7 +1070,7 @@ export default function App() {
   };
 
   const cellCls = (active: boolean) =>
-    `w-12 h-12 flex items-center justify-center rounded-xl font-bold text-[15px] cursor-pointer transition-all select-none shrink-0 ${
+    `w-10 h-10 flex items-center justify-center rounded-lg font-bold text-[13px] cursor-pointer transition-all select-none shrink-0 ${
       active
         ? "bg-zinc-900 text-white shadow-sm"
         : "bg-white text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
@@ -1030,11 +1083,16 @@ export default function App() {
           <span className="text-lg font-black text-zinc-900 tracking-tight">
             logodown
           </span>
-          <ShareButton
-            title="logodown"
-            text="Make logos like markdown logo"
-            label="공유"
-          />
+          <div className="flex items-center gap-2">
+            <a href="https://m1k.app/gl" target="_blank" rel="noopener noreferrer">
+              <img src="https://m1k.app/badge/gl.svg" alt="hits" className="h-5" />
+            </a>
+            <ShareButton
+              title="logodown"
+              text="Make logos like markdown logo"
+              label="공유"
+            />
+          </div>
         </AppShellHeader>
 
         <AppShellContent>
@@ -1042,48 +1100,29 @@ export default function App() {
             <HomeView onStart={() => setView("create")} />
           ) : (
           <>
-          {/* Preview — canvas feel */}
-          <Section className="pt-3 pb-0">
-            <div className="relative rounded-2xl bg-[repeating-conic-gradient(#f4f4f5_0%_25%,#fafafa_0%_50%)] bg-[length:16px_16px] flex flex-col items-center justify-center py-8 mb-3">
-              <LogoInline svgStr={logoSvgStr} displaySize={160} className="shadow-2xl transition-all duration-300 overflow-hidden" style={{ borderRadius: `${rPx(160)}px` }} />
-              {/* context previews */}
-              <div className="flex items-center gap-4 mt-5">
-                {/* tab bar mock */}
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/80 shadow-sm backdrop-blur-sm">
-                  <LogoInline svgStr={logoSvgStr} displaySize={14} className="overflow-hidden" style={{ borderRadius: `${rPx(14)}px` }} />
-                  <span className="text-[10px] font-semibold text-zinc-500">{wordmarkLabel}</span>
-                </div>
-                {/* app icon mock */}
-                <LogoInline svgStr={logoSvgStr} displaySize={48} className="shadow-md overflow-hidden" style={{ borderRadius: `${rPx(48)}px` }} />
-                {/* larger icon */}
-                <LogoInline svgStr={logoSvgStr} displaySize={36} className="shadow-sm overflow-hidden" style={{ borderRadius: `${rPx(36)}px` }} />
+          {/* Preview — sticky canvas */}
+          <div className="sticky top-0 z-10 px-3 pt-2 pb-4">
+            <div className="rounded-2xl bg-white flex flex-col items-center justify-center py-5 shadow-[0_8px_32px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.04)]">
+              <LogoInline svgStr={logoSvgStr} displaySize={120} className="shadow-2xl transition-all duration-300 overflow-hidden" style={{ borderRadius: `${rPx(120)}px` }} />
+              {/* Action bar */}
+              <div className="flex items-center gap-1.5 mt-4 px-4 w-full">
+                {([
+                  { label: "전체", onClick: handleRandom },
+                  { label: `${activeSlot === "front" ? "앞" : "뒤"} 슬롯`, onClick: handleRandomActiveSlot },
+                  { label: "색상", onClick: handleRandomColor },
+                ] as const).map(({ label, onClick }) => (
+                  <button
+                    key={label}
+                    onClick={onClick}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer"
+                  >
+                    <DiceIcon size={12} />
+                    <span className="text-[11px] font-semibold">{label}</span>
+                  </button>
+                ))}
               </div>
             </div>
-            {/* Action bar */}
-            <div className="flex items-center gap-2 mb-2">
-              <button
-                onClick={handleRandom}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer"
-              >
-                <DiceIcon size={14} />
-                <span className="text-[12px] font-semibold">전체 랜덤</span>
-              </button>
-              <button
-                onClick={handleRandomActiveSlot}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer"
-              >
-                <DiceIcon size={14} />
-                <span className="text-[12px] font-semibold">{activeSlot === "front" ? "앞" : "뒤"} 슬롯만</span>
-              </button>
-              <button
-                onClick={handleRandomColor}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer"
-              >
-                <DiceIcon size={14} />
-                <span className="text-[12px] font-semibold">색상만</span>
-              </button>
-            </div>
-          </Section>
+          </div>
 
           {/* Slot picker — card */}
           <Section>
@@ -1117,7 +1156,7 @@ export default function App() {
                         return (
                           <Tooltip key={s.id} label={s.id}>
                             <button onClick={() => pickFromGrid("symbol", s.id)} className={cellCls(isActive)}>
-                              <SymbolIcon sym={s} size={20} />
+                              <SymbolIcon sym={s} size={16} />
                             </button>
                           </Tooltip>
                         );
@@ -1154,6 +1193,53 @@ export default function App() {
                 );
               })()}
             </div>
+            {/* Rotate + Scale */}
+            {(() => {
+              const currentRotate = activeSlot === "front" ? frontRotate : backRotate;
+              const setCurrentRotate = activeSlot === "front" ? setFrontRotate : setBackRotate;
+              const currentScale = activeSlot === "front" ? frontScale : backScale;
+              const setCurrentScale = activeSlot === "front" ? setFrontScale : setBackScale;
+              return (
+                <div className="flex flex-col gap-2 mt-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-bold text-zinc-900 tracking-tight shrink-0 w-7">회전</span>
+                    <div className="flex items-center gap-1">
+                      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+                        <button
+                          key={deg}
+                          onClick={() => setCurrentRotate(deg)}
+                          className={`w-8 h-8 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${
+                            currentRotate === deg
+                              ? "bg-zinc-900 text-white shadow-sm"
+                              : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                          }`}
+                        >
+                          {deg}°
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-bold text-zinc-900 tracking-tight shrink-0 w-7">크기</span>
+                    <div className="flex items-center gap-1">
+                      {[1, 1.05, 1.10, 1.15, 1.20].map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setCurrentScale(s)}
+                          className={`h-8 px-2.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${
+                            currentScale === s
+                              ? "bg-zinc-900 text-white shadow-sm"
+                              : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                          }`}
+                        >
+                          {s === 1 ? "1x" : `${s.toFixed(2)}x`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </Section>
 
           {/* Color — card */}
@@ -1180,7 +1266,7 @@ export default function App() {
                       <button
                         key={name}
                         onClick={() => setColor(hex)}
-                        className={`relative w-12 h-12 rounded-xl cursor-pointer transition-all flex items-center justify-center ${color === hex ? "scale-90 shadow-md" : "hover:scale-95"}`}
+                        className={`relative w-10 h-10 rounded-lg cursor-pointer transition-all flex items-center justify-center ${color === hex ? "scale-90 shadow-md" : "hover:scale-95"}`}
                         style={swatchBg ? { background: swatchBg } : { backgroundColor: hex }}
                         title={name}
                       >
@@ -1192,7 +1278,7 @@ export default function App() {
                       </button>
                     );
                   })}
-                  <label className="w-12 h-12 rounded-xl cursor-pointer flex items-center justify-center bg-white hover:bg-zinc-100 transition-colors relative overflow-hidden border border-dashed border-zinc-300">
+                  <label className="w-10 h-10 rounded-lg cursor-pointer flex items-center justify-center bg-white hover:bg-zinc-100 transition-colors relative overflow-hidden border border-dashed border-zinc-300">
                     <span className="text-zinc-400 text-lg font-bold">+</span>
                     <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                   </label>
@@ -1220,12 +1306,12 @@ export default function App() {
                       onClick={() => setStyleBase(sb.id)}
                       className={`flex flex-col items-center gap-1.5 cursor-pointer transition-all ${active ? "" : "opacity-50 hover:opacity-80"}`}
                     >
-                      <div className={`relative overflow-hidden transition-all ${active ? "ring-2 ring-zinc-900 ring-offset-2" : ""}`} style={{ borderRadius: `${Math.round(72 * LOGO_RADIUS)}px` }}>
+                      <div className={`relative overflow-hidden transition-all ${active ? "ring-2 ring-zinc-900 ring-offset-2" : ""}`} style={{ borderRadius: `${Math.round(56 * LOGO_RADIUS)}px` }}>
                         <LogoInline
                           svgStr={preview}
-                          displaySize={72}
+                          displaySize={56}
                           className="overflow-hidden block"
-                          style={{ borderRadius: `${Math.round(72 * LOGO_RADIUS)}px` }}
+                          style={{ borderRadius: `${Math.round(56 * LOGO_RADIUS)}px` }}
                         />
                       </div>
                       <span className={`text-[11px] font-semibold ${active ? "text-zinc-900" : "text-zinc-400"}`}>{sb.label}</span>
@@ -1234,11 +1320,83 @@ export default function App() {
                 })}
               </div>
             </div>
+            {/* Shadow level */}
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-[12px] font-bold text-zinc-900 tracking-tight">음영</span>
+              <div className="flex items-center gap-1">
+                {[
+                  { v: 0, label: "없음" },
+                  { v: 1, label: "약하게" },
+                  { v: 2, label: "보통" },
+                  { v: 3, label: "강하게" },
+                ].map(({ v, label }) => (
+                  <button
+                    key={v}
+                    onClick={() => setShadow(v)}
+                    className={`h-7 px-2.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${
+                      shadow === v
+                        ? "bg-zinc-900 text-white shadow-sm"
+                        : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </Section>
 
           {/* Download */}
           <Section>
             <PickerHeader label="다운로드" />
+
+            {/* OG card — accordion */}
+            <details className="group rounded-2xl bg-zinc-50 mb-4">
+              <summary className="flex items-center gap-1.5 p-3 cursor-pointer select-none list-none">
+                <svg className="w-3 h-3 text-zinc-400 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L9 6L4.5 10V2Z"/></svg>
+                <span className="text-[12px] font-bold text-zinc-900 tracking-tight">소셜 공유 카드</span>
+                <span className="text-[10px] text-zinc-400 ml-auto">OG 1200×630</span>
+              </summary>
+              <div className="px-3 pb-3 space-y-2">
+                {/* OG preview */}
+                <div className="rounded-xl overflow-hidden border border-zinc-200 shadow-sm relative" style={{ aspectRatio: "1200/630" }}>
+                  <div className="absolute inset-0 opacity-85" style={{ background: scheme.bgGradEnd ? `linear-gradient(135deg, ${scheme.bg}, ${scheme.bgGradEnd})` : scheme.bg }} />
+                  <div className="relative w-full h-full flex items-center gap-[6%] px-[8%]">
+                    <LogoInline svgStr={logoSvgStr} displaySize={90} className="shrink-0 overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.15)]" style={{ borderRadius: `${rPx(90)}px` }} />
+                    {(() => {
+                      const c = isLightHex(scheme.bg) ? "#09090b" : "#ffffff";
+                      return (
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <span className="text-[18px] font-black truncate" style={{ color: c }}>{ogTitle || "Brand"}</span>
+                          <span className="text-[11px] truncate opacity-50" style={{ color: c }}>{ogDesc || "Description"}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+                {/* inputs */}
+                <div>
+                  <label className="text-[10px] font-semibold text-zinc-500 mb-0.5 block">Service</label>
+                  <input
+                    type="text"
+                    value={ogTitle}
+                    onChange={(e) => setOgTitle(e.target.value)}
+                    placeholder="브랜드명"
+                    className="w-full h-7 px-2.5 rounded-lg bg-white text-[11px] font-semibold text-zinc-900 outline-none focus:ring-2 ring-zinc-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-zinc-500 mb-0.5 block">Slogan</label>
+                  <input
+                    type="text"
+                    value={ogDesc}
+                    onChange={(e) => setOgDesc(e.target.value)}
+                    placeholder="한 줄 소개"
+                    className="w-full h-7 px-2.5 rounded-lg bg-white text-[11px] text-zinc-600 outline-none focus:ring-2 ring-zinc-300"
+                  />
+                </div>
+              </div>
+            </details>
 
             {/* Recommended: full pack */}
             <button

@@ -57,6 +57,17 @@ const ORDER = [
   "flask",
   "handshake",
   "key",
+  // tool · craft
+  "hammer",
+  "gavel",
+  "wrench",
+  "settings",
+  "scissors",
+  "pocketknife",
+  "sword",
+  "paintroller",
+  "box",
+  "packageopen",
 ] as const;
 
 /** Short display labels (fallback: id itself). */
@@ -71,6 +82,9 @@ const LABELS: Record<string, string> = {
   coffeebean: "bean",
   basketball: "bball",
   waveform: "wform",
+  pocketknife: "knife",
+  paintroller: "roller",
+  packageopen: "pkg",
 };
 
 const RAW = import.meta.glob<string>("./*.svg", {
