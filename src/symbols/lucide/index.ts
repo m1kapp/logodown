@@ -1,4 +1,4 @@
-import { parseSvg } from "../parse";
+import { buildSymbolSet, type SymbolEntry } from "../parse";
 
 /**
  * Display-order for lucide symbols. `id` = filename without `.svg`.
@@ -75,8 +75,7 @@ const ORDER = [
   "dog",
   "cat",
   "panda",
-  // weather · nature
-  "flame",
+  // weather · nature (flame·diamond은 LOGO_SYMBOLS에 이미 손그림 버전이 있어 제외 — id 충돌)
   "droplet",
   "snowflake",
   "wind",
@@ -87,7 +86,6 @@ const ORDER = [
   "clover",
   // luxe · abstract
   "crown",
-  "diamond",
   "puzzle",
   "magnet",
   // exploration
@@ -140,25 +138,8 @@ const RAW = import.meta.glob<string>("./*.svg", {
   eager: true,
 });
 
-export type LucideSymbol = {
-  id: string;
-  label: string;
-  vb: number;
-  stroke: true;
-  strokeWidth: number;
-  d: string[];
-};
+export type LucideSymbol = SymbolEntry & { stroke: true };
 
-export const LUCIDE_SYMBOLS: LucideSymbol[] = ORDER.map((id) => {
-  const raw = RAW[`./${id}.svg`];
-  if (!raw) throw new Error(`[lucide] missing svg file: ${id}.svg`);
-  const p = parseSvg(raw);
-  return {
-    id,
-    label: LABELS[id] ?? id,
-    vb: p.vb,
-    stroke: true,
-    strokeWidth: p.strokeWidth,
-    d: p.d,
-  };
-});
+export const LUCIDE_SYMBOLS = buildSymbolSet(ORDER, RAW, {
+  source: "lucide", labels: LABELS, forceStroke: true,
+}) as LucideSymbol[];

@@ -1,4 +1,4 @@
-import { parseSvg } from "../parse";
+import { buildSymbolSet, type SymbolEntry } from "../parse";
 
 /**
  * Custom fill-based symbols (SVG root has no `stroke` attribute → treated as filled).
@@ -18,25 +18,8 @@ const RAW = import.meta.glob<string>("./*.svg", {
   eager: true,
 });
 
-export type CustomSymbol = {
-  id: string;
-  label: string;
-  vb: number;
-  stroke: boolean;
-  strokeWidth?: number;
-  d: string[];
-};
+export type CustomSymbol = SymbolEntry;
 
-export const CUSTOM_SYMBOLS: CustomSymbol[] = ORDER.map((id) => {
-  const raw = RAW[`./${id}.svg`];
-  if (!raw) throw new Error(`[custom] missing svg file: ${id}.svg`);
-  const p = parseSvg(raw);
-  return {
-    id,
-    label: LABELS[id] ?? id,
-    vb: p.vb,
-    stroke: p.stroke,
-    strokeWidth: p.strokeWidth,
-    d: p.d,
-  };
+export const CUSTOM_SYMBOLS: CustomSymbol[] = buildSymbolSet(ORDER, RAW, {
+  source: "custom", labels: LABELS,
 });
