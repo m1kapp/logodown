@@ -17,7 +17,7 @@ async function loadSvgImage(svgStr: string, errMsg: string): Promise<{ img: HTML
   return { img, revoke: () => URL.revokeObjectURL(url) };
 }
 
-async function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> {
+export async function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> {
   const out = await new Promise<Blob>((res, rej) => {
     canvas.toBlob((b) => (b ? res(b) : rej(new Error("toBlob failed"))), "image/png");
   });

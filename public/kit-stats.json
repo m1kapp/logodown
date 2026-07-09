@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-07-09T14:24:08.516Z",
+  "generatedAt": "2026-07-09T14:48:47.812Z",
   "kitVersion": "0.0.31",
   "source": {
     "dir": "src",
-    "files": 11,
-    "totalLines": 2265,
-    "codeLines": 1944,
+    "files": 25,
+    "totalLines": 2403,
+    "codeLines": 2068,
     "breakdown": {
       "frontend": {
-        "files": 2,
+        "files": 9,
         "codeLines": 1070
       },
       "backend": {
@@ -16,65 +16,69 @@
         "codeLines": 0
       },
       "shared": {
-        "files": 9,
-        "codeLines": 874
+        "files": 16,
+        "codeLines": 998
       }
     }
   },
   "quality": {
     "engine": "ast2",
-    "score": 78,
-    "grade": "B",
+    "score": 91,
+    "grade": "A+",
     "cognitive": {
       "avg": 1.1,
       "p90": 4,
-      "max": 16,
-      "over15": 1,
+      "max": 14,
+      "over15": 0,
       "over25": 0,
       "worst": [
-        {
-          "name": "App",
-          "cog": 16,
-          "cc": 15,
-          "file": "src/App.tsx",
-          "line": 571
-        },
         {
           "name": "(anonymous)",
           "cog": 14,
           "cc": 9,
-          "file": "src/logo-engine.ts",
-          "line": 145
+          "file": "src/text-render.ts",
+          "line": 10
         },
         {
           "name": "hexToHsl",
           "cog": 11,
           "cc": 6,
-          "file": "src/logo-engine.ts",
-          "line": 86
+          "file": "src/color-utils.ts",
+          "line": 1
+        },
+        {
+          "name": "App",
+          "cog": 10,
+          "cc": 12,
+          "file": "src/App.tsx",
+          "line": 31
         },
         {
           "name": "resolveStyleId",
           "cog": 10,
           "cc": 8,
-          "file": "src/App.tsx",
-          "line": 206
+          "file": "src/logo-styles.ts",
+          "line": 80
         },
         {
           "name": "renderSymbolSlot",
           "cog": 8,
           "cc": 13,
           "file": "src/logo-engine.ts",
-          "line": 217
+          "line": 31
         }
       ]
     },
     "duplication": {
-      "percent": 1.4,
-      "dupTokens": 104,
-      "totalTokens": 7571,
-      "blocks": 3,
+      "percent": 1.8,
+      "dupTokens": 230,
+      "totalTokens": 12674,
+      "blocks": 17,
       "worstFiles": [
+        {
+          "file": "src/ui-icons.tsx",
+          "dupTokens": 126
+        },
         {
           "file": "src/symbols/parse.ts",
           "dupTokens": 104
@@ -97,7 +101,7 @@
     },
     "cc": {
       "functions": 169,
-      "avg": 2.2,
+      "avg": 2.1,
       "p90": 5,
       "max": 19,
       "over10": 3,
@@ -107,42 +111,42 @@
           "name": "buildLogoSvgStr",
           "cc": 19,
           "file": "src/logo-engine.ts",
-          "line": 279
-        },
-        {
-          "name": "App",
-          "cc": 15,
-          "file": "src/App.tsx",
-          "line": 571
+          "line": 93
         },
         {
           "name": "renderSymbolSlot",
           "cc": 13,
           "file": "src/logo-engine.ts",
-          "line": 217
+          "line": 31
+        },
+        {
+          "name": "App",
+          "cc": 12,
+          "file": "src/App.tsx",
+          "line": 31
         },
         {
           "name": "resolveStyle",
           "cc": 10,
-          "file": "src/App.tsx",
-          "line": 213
+          "file": "src/logo-styles.ts",
+          "line": 87
         },
         {
           "name": "ColorSwatch",
           "cc": 10,
-          "file": "src/App.tsx",
-          "line": 290
+          "file": "src/ui-parts.tsx",
+          "line": 80
         }
       ]
     },
-    "branchDensity": 10.5,
-    "branches": 205,
-    "functions": 178,
-    "avgFileLines": 177,
-    "longFiles": 2,
+    "branchDensity": 9.7,
+    "branches": 201,
+    "functions": 197,
+    "avgFileLines": 83,
+    "longFiles": 1,
     "maxFile": {
       "path": "src/App.tsx",
-      "lines": 1058
+      "lines": 281
     }
   },
   "kit": {
@@ -178,25 +182,20 @@
         "category": "component"
       },
       {
-        "name": "Badge",
-        "loc": 35,
-        "category": "component"
-      },
-      {
         "name": "Section",
         "loc": 17,
         "category": "component"
       }
     ],
-    "savedLines": 566,
-    "savedKB": 22,
+    "savedLines": 531,
+    "savedKB": 21,
     "savedA4": 7,
-    "savedPercent": 23,
+    "savedPercent": 20,
     "usage": {
       "component": {
-        "used": 12,
+        "used": 11,
         "total": 59,
-        "percent": 20
+        "percent": 19
       },
       "hook": {
         "used": 1,
