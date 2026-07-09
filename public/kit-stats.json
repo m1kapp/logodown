@@ -1,0 +1,224 @@
+{
+  "generatedAt": "2026-07-09T13:01:49.663Z",
+  "kitVersion": "0.0.31",
+  "source": {
+    "dir": "src",
+    "files": 7,
+    "totalLines": 2246,
+    "codeLines": 1962,
+    "breakdown": {
+      "frontend": {
+        "files": 2,
+        "codeLines": 1420
+      },
+      "backend": {
+        "files": 0,
+        "codeLines": 0
+      },
+      "shared": {
+        "files": 5,
+        "codeLines": 542
+      }
+    }
+  },
+  "quality": {
+    "engine": "ast2",
+    "score": 37,
+    "grade": "D",
+    "cognitive": {
+      "avg": 1.5,
+      "p90": 4,
+      "max": 30,
+      "over15": 4,
+      "over25": 1,
+      "worst": [
+        {
+          "name": "parseSvg",
+          "cog": 30,
+          "cc": 21,
+          "file": "src/symbols/parse.ts",
+          "line": 13
+        },
+        {
+          "name": "renderTextSlot",
+          "cog": 23,
+          "cc": 16,
+          "file": "src/App.tsx",
+          "line": 179
+        },
+        {
+          "name": "buildLogoSvgStr",
+          "cog": 18,
+          "cc": 27,
+          "file": "src/App.tsx",
+          "line": 233
+        },
+        {
+          "name": "App",
+          "cog": 16,
+          "cc": 15,
+          "file": "src/App.tsx",
+          "line": 963
+        },
+        {
+          "name": "(anonymous)",
+          "cog": 14,
+          "cc": 9,
+          "file": "src/App.tsx",
+          "line": 154
+        }
+      ]
+    },
+    "duplication": {
+      "percent": 12,
+      "dupTokens": 955,
+      "totalTokens": 7981,
+      "blocks": 116,
+      "worstFiles": [
+        {
+          "file": "src/seo-pack.ts",
+          "dupTokens": 421
+        },
+        {
+          "file": "src/App.tsx",
+          "dupTokens": 224
+        },
+        {
+          "file": "src/symbols/parse.ts",
+          "dupTokens": 104
+        }
+      ],
+      "worstBlocks": [
+        [
+          "src/seo-pack.ts:37",
+          "src/seo-pack.ts:111",
+          "src/seo-pack.ts:155"
+        ],
+        [
+          "src/seo-pack.ts:37",
+          "src/seo-pack.ts:111",
+          "src/seo-pack.ts:155"
+        ],
+        [
+          "src/seo-pack.ts:37",
+          "src/seo-pack.ts:111",
+          "src/seo-pack.ts:155"
+        ]
+      ]
+    },
+    "cc": {
+      "functions": 157,
+      "avg": 2.4,
+      "p90": 5,
+      "max": 27,
+      "over10": 6,
+      "over20": 2,
+      "worst": [
+        {
+          "name": "buildLogoSvgStr",
+          "cc": 27,
+          "file": "src/App.tsx",
+          "line": 233
+        },
+        {
+          "name": "parseSvg",
+          "cc": 21,
+          "file": "src/symbols/parse.ts",
+          "line": 13
+        },
+        {
+          "name": "renderTextSlot",
+          "cc": 16,
+          "file": "src/App.tsx",
+          "line": 179
+        },
+        {
+          "name": "App",
+          "cc": 15,
+          "file": "src/App.tsx",
+          "line": 963
+        },
+        {
+          "name": "renderSymbolSlot",
+          "cc": 13,
+          "file": "src/App.tsx",
+          "line": 212
+        }
+      ]
+    },
+    "branchDensity": 11.9,
+    "branches": 234,
+    "functions": 161,
+    "avgFileLines": 280,
+    "longFiles": 2,
+    "maxFile": {
+      "path": "src/App.tsx",
+      "lines": 1408
+    }
+  },
+  "kit": {
+    "features": [
+      {
+        "name": "Watermark",
+        "loc": 189,
+        "category": "component"
+      },
+      {
+        "name": "ToastProvider",
+        "loc": 93,
+        "category": "component"
+      },
+      {
+        "name": "AppShell",
+        "loc": 76,
+        "category": "component"
+      },
+      {
+        "name": "Button",
+        "loc": 61,
+        "category": "component"
+      },
+      {
+        "name": "Tooltip",
+        "loc": 50,
+        "category": "component"
+      },
+      {
+        "name": "TabBar",
+        "loc": 45,
+        "category": "component"
+      },
+      {
+        "name": "Badge",
+        "loc": 35,
+        "category": "component"
+      },
+      {
+        "name": "Section",
+        "loc": 17,
+        "category": "component"
+      }
+    ],
+    "savedLines": 566,
+    "savedKB": 22,
+    "savedA4": 7,
+    "savedPercent": 22,
+    "usage": {
+      "component": {
+        "used": 12,
+        "total": 59,
+        "percent": 20
+      },
+      "hook": {
+        "used": 1,
+        "total": 13,
+        "percent": 8
+      },
+      "util": {
+        "used": 0,
+        "total": 26,
+        "percent": 0
+      }
+    }
+  }
+}

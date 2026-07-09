@@ -68,6 +68,53 @@ const ORDER = [
   "paintroller",
   "box",
   "packageopen",
+  // animals
+  "rabbit",
+  "fish",
+  "bird",
+  "dog",
+  "cat",
+  "panda",
+  // weather · nature
+  "flame",
+  "droplet",
+  "snowflake",
+  "wind",
+  "waves",
+  "tornado",
+  "sparkles",
+  "flower",
+  "clover",
+  // luxe · abstract
+  "crown",
+  "diamond",
+  "puzzle",
+  "magnet",
+  // exploration
+  "compass",
+  "map",
+  "telescope",
+  "binoculars",
+  "satellite",
+  "orbit",
+  // science
+  "atom",
+  "dna",
+  "microscope",
+  "beaker",
+  "pill",
+  "syringe",
+  "stethoscope",
+  // food · drink
+  "apple",
+  "carrot",
+  "pizza",
+  "cookie",
+  "cake",
+  "wine",
+  "beer",
+  "donut",
+  "fan",
 ] as const;
 
 /** Short display labels (fallback: id itself). */

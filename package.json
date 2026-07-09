@@ -3,12 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "stats": "m1kkit stats --dir=src --out=public",
+    "dev": "m1kkit stats --dir=src --out=public || true && vite",
+    "build": "m1kkit stats --dir=src --out=public || true && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@m1kapp/kit": "latest",
+    "@m1kapp/kit": "^0.0.31",
     "fflate": "^0.8.2",
     "opentype.js": "^1.3.4",
     "react": "^19.0.0",

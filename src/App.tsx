@@ -551,6 +551,29 @@ const LOGO_COLORS = [
   { name: "brown",    hex: "#78350f" },
   { name: "white",    hex: "#fafafa" },
 ];
+// well-known product/brand colors — for logos meant to sit next to these tools
+const BRAND_COLORS = [
+  { name: "claude",    hex: "#D97757" },
+  { name: "openai",    hex: "#10A37F" },
+  { name: "vercel",    hex: "#000000" },
+  { name: "github",    hex: "#181717" },
+  { name: "figma",     hex: "#A259FF" },
+  { name: "linear",    hex: "#5E6AD2" },
+  { name: "stripe",    hex: "#635BFF" },
+  { name: "slack",     hex: "#4A154B" },
+  { name: "discord",   hex: "#5865F2" },
+  { name: "spotify",   hex: "#1DB954" },
+  { name: "youtube",   hex: "#FF0000" },
+  { name: "instagram", hex: "#E1306C" },
+  { name: "twitter",   hex: "#1DA1F2" },
+  { name: "whatsapp",  hex: "#25D366" },
+  { name: "telegram",  hex: "#26A5E4" },
+  { name: "linkedin",  hex: "#0A66C2" },
+  { name: "tiktok",    hex: "#FE2C55" },
+  { name: "netflix",   hex: "#E50914" },
+  { name: "twitch",    hex: "#9146FF" },
+  { name: "reddit",    hex: "#FF4500" },
+];
 const LOGO_RADIUS = 0.15;
 
 /* ══════════════════════════════════════════════
@@ -660,6 +683,26 @@ function DiceIcon({ size = 16 }: { size?: number }) {
 }
 
 // Row-major 2-row grid with horizontal scroll: fills row 1 fully, then row 2.
+function ColorSwatch({ name, hex, active, gradient, onClick }: {
+  name: string; hex: string; active: boolean; gradient: boolean; onClick: () => void;
+}) {
+  const swatchBg = gradient ? `linear-gradient(135deg, ${hex}, ${autoGradientEnd(hex)})` : undefined;
+  return (
+    <button
+      onClick={onClick}
+      className={`relative w-10 h-10 rounded-lg cursor-pointer transition-all flex items-center justify-center ${active ? "scale-90 shadow-md" : "hover:scale-95"}`}
+      style={swatchBg ? { background: swatchBg } : { backgroundColor: hex }}
+      title={name}
+    >
+      {active && (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isLightHex(hex) ? "#09090b" : "#ffffff"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 function gridStyle(itemCount: number, cellSize = "2.5rem"): React.CSSProperties {
   const cols = Math.max(1, Math.ceil(itemCount / 2));
   return {
@@ -1258,30 +1301,25 @@ export default function App() {
               </div>
               <div className="overflow-x-auto pb-1 scrollbar-hide">
                 <div style={gridStyle(LOGO_COLORS.length + 1)}>
-                  {LOGO_COLORS.map(({ name, hex }) => {
-                    const swatchBg = colorMode === "gradient"
-                      ? `linear-gradient(135deg, ${hex}, ${autoGradientEnd(hex)})`
-                      : undefined;
-                    return (
-                      <button
-                        key={name}
-                        onClick={() => setColor(hex)}
-                        className={`relative w-10 h-10 rounded-lg cursor-pointer transition-all flex items-center justify-center ${color === hex ? "scale-90 shadow-md" : "hover:scale-95"}`}
-                        style={swatchBg ? { background: swatchBg } : { backgroundColor: hex }}
-                        title={name}
-                      >
-                        {color === hex && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isLightHex(hex) ? "#09090b" : "#ffffff"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        )}
-                      </button>
-                    );
-                  })}
+                  {LOGO_COLORS.map(({ name, hex }) => (
+                    <ColorSwatch key={name} name={name} hex={hex} active={color === hex} gradient={colorMode === "gradient"} onClick={() => setColor(hex)} />
+                  ))}
                   <label className="w-10 h-10 rounded-lg cursor-pointer flex items-center justify-center bg-white hover:bg-zinc-100 transition-colors relative overflow-hidden border border-dashed border-zinc-300">
                     <span className="text-zinc-400 text-lg font-bold">+</span>
                     <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                   </label>
+                </div>
+              </div>
+
+              {/* 브랜드 컬러 — 다른 서비스 로고 옆에 나란히 두기 좋은 색 */}
+              <div className="mt-3 pt-3 border-t border-zinc-200">
+                <span className="text-[10px] font-semibold text-zinc-400 tracking-tight block mb-2">브랜드</span>
+                <div className="overflow-x-auto pb-1 scrollbar-hide">
+                  <div style={gridStyle(BRAND_COLORS.length)}>
+                    {BRAND_COLORS.map(({ name, hex }) => (
+                      <ColorSwatch key={name} name={name} hex={hex} active={color === hex} gradient={colorMode === "gradient"} onClick={() => setColor(hex)} />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
