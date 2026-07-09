@@ -550,22 +550,16 @@ const LOGO_COLORS = [
   // warm neutrals / white
   { name: "brown",    hex: "#78350f" },
   { name: "white",    hex: "#fafafa" },
-];
-// well-known product/brand colors — for logos meant to sit next to these tools
-const BRAND_COLORS = [
+  // brand colors — for logos meant to sit next to these tools
   { name: "claude",    hex: "#D97757" },
   { name: "openai",    hex: "#10A37F" },
-  { name: "vercel",    hex: "#000000" },
-  { name: "github",    hex: "#181717" },
   { name: "figma",     hex: "#A259FF" },
   { name: "linear",    hex: "#5E6AD2" },
   { name: "stripe",    hex: "#635BFF" },
   { name: "slack",     hex: "#4A154B" },
   { name: "discord",   hex: "#5865F2" },
   { name: "spotify",   hex: "#1DB954" },
-  { name: "youtube",   hex: "#FF0000" },
   { name: "instagram", hex: "#E1306C" },
-  { name: "twitter",   hex: "#1DA1F2" },
   { name: "whatsapp",  hex: "#25D366" },
   { name: "telegram",  hex: "#26A5E4" },
   { name: "linkedin",  hex: "#0A66C2" },
@@ -687,10 +681,14 @@ function ColorSwatch({ name, hex, active, gradient, onClick }: {
   name: string; hex: string; active: boolean; gradient: boolean; onClick: () => void;
 }) {
   const swatchBg = gradient ? `linear-gradient(135deg, ${hex}, ${autoGradientEnd(hex)})` : undefined;
+  // 흰색/거의-흰색 스와치는 카드 배경(zinc-50 ≈ #fafafa)과 구분이 안 돼 '빈칸'처럼
+  // 보이므로 테두리 추가 (일반 밝은 색은 채도가 있어 문제없음, near-white만 타겟)
+  const [r, g, b] = [hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)].map((h) => parseInt(h, 16) || 0);
+  const needsBorder = !gradient && r > 235 && g > 235 && b > 235;
   return (
     <button
       onClick={onClick}
-      className={`relative w-10 h-10 rounded-lg cursor-pointer transition-all flex items-center justify-center ${active ? "scale-90 shadow-md" : "hover:scale-95"}`}
+      className={`relative w-10 h-10 rounded-lg cursor-pointer transition-all flex items-center justify-center ${active ? "scale-90 shadow-md" : "hover:scale-95"} ${needsBorder ? "border border-zinc-300" : ""}`}
       style={swatchBg ? { background: swatchBg } : { backgroundColor: hex }}
       title={name}
     >
@@ -1308,18 +1306,6 @@ export default function App() {
                     <span className="text-zinc-400 text-lg font-bold">+</span>
                     <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                   </label>
-                </div>
-              </div>
-
-              {/* 브랜드 컬러 — 다른 서비스 로고 옆에 나란히 두기 좋은 색 */}
-              <div className="mt-3 pt-3 border-t border-zinc-200">
-                <span className="text-[10px] font-semibold text-zinc-400 tracking-tight block mb-2">브랜드</span>
-                <div className="overflow-x-auto pb-1 scrollbar-hide">
-                  <div style={gridStyle(BRAND_COLORS.length)}>
-                    {BRAND_COLORS.map(({ name, hex }) => (
-                      <ColorSwatch key={name} name={name} hex={hex} active={color === hex} gradient={colorMode === "gradient"} onClick={() => setColor(hex)} />
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>

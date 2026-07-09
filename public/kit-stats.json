@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-07-09T13:01:49.663Z",
+  "generatedAt": "2026-07-09T14:08:06.170Z",
   "kitVersion": "0.0.31",
   "source": {
     "dir": "src",
     "files": 7,
-    "totalLines": 2246,
-    "codeLines": 1962,
+    "totalLines": 2232,
+    "codeLines": 1947,
     "breakdown": {
       "frontend": {
         "files": 2,
-        "codeLines": 1420
+        "codeLines": 1405
       },
       "backend": {
         "files": 0,
@@ -58,7 +58,7 @@
           "cog": 16,
           "cc": 15,
           "file": "src/App.tsx",
-          "line": 963
+          "line": 961
         },
         {
           "name": "(anonymous)",
@@ -72,7 +72,7 @@
     "duplication": {
       "percent": 12,
       "dupTokens": 955,
-      "totalTokens": 7981,
+      "totalTokens": 7989,
       "blocks": 116,
       "worstFiles": [
         {
@@ -107,7 +107,7 @@
       ]
     },
     "cc": {
-      "functions": 157,
+      "functions": 156,
       "avg": 2.4,
       "p90": 5,
       "max": 27,
@@ -136,7 +136,7 @@
           "name": "App",
           "cc": 15,
           "file": "src/App.tsx",
-          "line": 963
+          "line": 961
         },
         {
           "name": "renderSymbolSlot",
@@ -146,14 +146,14 @@
         }
       ]
     },
-    "branchDensity": 11.9,
-    "branches": 234,
-    "functions": 161,
-    "avgFileLines": 280,
+    "branchDensity": 12.3,
+    "branches": 239,
+    "functions": 160,
+    "avgFileLines": 278,
     "longFiles": 2,
     "maxFile": {
       "path": "src/App.tsx",
-      "lines": 1408
+      "lines": 1393
     }
   },
   "kit": {
@@ -202,7 +202,7 @@
     "savedLines": 566,
     "savedKB": 22,
     "savedA4": 7,
-    "savedPercent": 22,
+    "savedPercent": 23,
     "usage": {
       "component": {
         "used": 12,
