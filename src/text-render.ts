@@ -9,16 +9,9 @@ export type TextRenderer = (text: string, cx: number, cy: number, E: number, fgF
 export function makePathTextRenderer(fonts: LoadedFonts): TextRenderer {
   return (text, cx, cy, E, fgFill) => {
     const displayText = (text || "A").slice(0, 3);
-    const charCount = displayText.length;
-    const isAllLower = /^[a-z]+$/.test(displayText);
-    const hasHangul = /[가-힣]/.test(displayText);
-    const div1 = isAllLower ? 0.60 : hasHangul ? 0.92 : 0.72;
-    const fontSize = charCount === 1
-      ? E / div1
-      : charCount === 2
-        ? (isAllLower ? E * 1.20 : E)
-        : (isAllLower ? E * 0.94 : E * 0.78);
-    const font = isAllLower ? fonts.pacifico : fonts.pretendard;
+    const script = classifyScript(displayText);
+    const fontSize = textSlotFontSize(script, displayText.length, E);
+    const font = script === "lower" ? fonts.pacifico : fonts.pretendard;
     // Render at origin to measure bounding box, then offset so visual center
     // lands at (cx, cy) — matches text-anchor=middle + dominant-baseline=central
     // and naturally fixes Pacifico's per-letter ascender quirks (no manual offset needed).

@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@m1kapp/kit": "^0.0.31",
+    "@m1kapp/kit": "^0.0.37",
     "fflate": "^0.8.2",
     "opentype.js": "^1.3.4",
     "react": "^19.0.0",

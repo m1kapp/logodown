@@ -1,110 +1,99 @@
 {
-  "generatedAt": "2026-07-09T14:48:47.812Z",
-  "kitVersion": "0.0.31",
+  "generatedAt": "2026-07-22T13:26:21.502Z",
+  "kitVersion": "0.0.37",
   "source": {
     "dir": "src",
-    "files": 25,
-    "totalLines": 2403,
-    "codeLines": 2068,
+    "files": 26,
+    "totalLines": 2488,
+    "codeLines": 2130,
     "breakdown": {
       "frontend": {
         "files": 9,
-        "codeLines": 1070
+        "codeLines": 986
       },
       "backend": {
         "files": 0,
         "codeLines": 0
       },
       "shared": {
-        "files": 16,
-        "codeLines": 998
+        "files": 17,
+        "codeLines": 1144
       }
     }
   },
   "quality": {
     "engine": "ast2",
-    "score": 91,
+    "score": 100,
     "grade": "A+",
     "cognitive": {
-      "avg": 1.1,
-      "p90": 4,
-      "max": 14,
+      "avg": 0.9,
+      "p90": 3,
+      "max": 8,
       "over15": 0,
       "over25": 0,
       "worst": [
-        {
-          "name": "(anonymous)",
-          "cog": 14,
-          "cc": 9,
-          "file": "src/text-render.ts",
-          "line": 10
-        },
-        {
-          "name": "hexToHsl",
-          "cog": 11,
-          "cc": 6,
-          "file": "src/color-utils.ts",
-          "line": 1
-        },
-        {
-          "name": "App",
-          "cog": 10,
-          "cc": 12,
-          "file": "src/App.tsx",
-          "line": 31
-        },
-        {
-          "name": "resolveStyleId",
-          "cog": 10,
-          "cc": 8,
-          "file": "src/logo-styles.ts",
-          "line": 80
-        },
         {
           "name": "renderSymbolSlot",
           "cog": 8,
           "cc": 13,
           "file": "src/logo-engine.ts",
           "line": 31
+        },
+        {
+          "name": "buildLogoSvgStr",
+          "cog": 8,
+          "cc": 19,
+          "file": "src/logo-engine.ts",
+          "line": 93
+        },
+        {
+          "name": "App",
+          "cog": 7,
+          "cc": 8,
+          "file": "src/App.tsx",
+          "line": 29
+        },
+        {
+          "name": "renderTextSlot",
+          "cog": 7,
+          "cc": 9,
+          "file": "src/text-render.ts",
+          "line": 58
+        },
+        {
+          "name": "ColorSwatch",
+          "cog": 7,
+          "cc": 10,
+          "file": "src/ui-parts.tsx",
+          "line": 80
         }
       ]
     },
     "duplication": {
-      "percent": 1.8,
-      "dupTokens": 230,
-      "totalTokens": 12674,
-      "blocks": 17,
-      "worstFiles": [
-        {
-          "file": "src/ui-icons.tsx",
-          "dupTokens": 126
-        },
-        {
-          "file": "src/symbols/parse.ts",
-          "dupTokens": 104
-        }
-      ],
-      "worstBlocks": [
-        [
-          "src/symbols/parse.ts:14",
-          "src/symbols/parse.ts:19"
-        ],
-        [
-          "src/symbols/parse.ts:14",
-          "src/symbols/parse.ts:19"
-        ],
-        [
-          "src/symbols/parse.ts:14",
-          "src/symbols/parse.ts:19"
-        ]
-      ]
+      "percent": 0,
+      "dupTokens": 0,
+      "totalTokens": 12801,
+      "blocks": 0,
+      "worstFiles": [],
+      "worstBlocks": []
+    },
+    "io": {
+      "readers": 0,
+      "uncachedReaders": 0,
+      "loopSites": 0,
+      "uncachedLoopSites": 0,
+      "worst": []
+    },
+    "renderGates": {
+      "hostages": 0,
+      "worst": []
     },
     "cc": {
-      "functions": 169,
-      "avg": 2.1,
-      "p90": 5,
+      "functions": 175,
+      "avg": 2,
+      "p90": 4,
       "max": 19,
-      "over10": 3,
+      "over10": 2,
       "over20": 0,
       "worst": [
         {
@@ -120,40 +109,40 @@
           "line": 31
         },
         {
-          "name": "App",
-          "cc": 12,
-          "file": "src/App.tsx",
-          "line": 31
-        },
-        {
           "name": "resolveStyle",
           "cc": 10,
           "file": "src/logo-styles.ts",
-          "line": 87
+          "line": 91
         },
         {
           "name": "ColorSwatch",
           "cc": 10,
           "file": "src/ui-parts.tsx",
           "line": 80
+        },
+        {
+          "name": "renderTextSlot",
+          "cc": 9,
+          "file": "src/text-render.ts",
+          "line": 58
         }
       ]
     },
-    "branchDensity": 9.7,
-    "branches": 201,
-    "functions": 197,
-    "avgFileLines": 83,
-    "longFiles": 1,
+    "branchDensity": 8.8,
+    "branches": 188,
+    "functions": 209,
+    "avgFileLines": 82,
+    "longFiles": 0,
     "maxFile": {
       "path": "src/App.tsx",
-      "lines": 281
+      "lines": 189
     }
   },
   "kit": {
     "features": [
       {
         "name": "Watermark",
-        "loc": 189,
+        "loc": 190,
         "category": "component"
       },
       {
@@ -163,7 +152,7 @@
       },
       {
         "name": "AppShell",
-        "loc": 76,
+        "loc": 78,
         "category": "component"
       },
       {
@@ -173,12 +162,12 @@
       },
       {
         "name": "Tooltip",
-        "loc": 50,
+        "loc": 53,
         "category": "component"
       },
       {
         "name": "TabBar",
-        "loc": 45,
+        "loc": 44,
         "category": "component"
       },
       {
@@ -187,15 +176,15 @@
         "category": "component"
       }
     ],
-    "savedLines": 531,
+    "savedLines": 536,
     "savedKB": 21,
     "savedA4": 7,
     "savedPercent": 20,
     "usage": {
       "component": {
         "used": 11,
-        "total": 59,
-        "percent": 19
+        "total": 60,
+        "percent": 18
       },
       "hook": {
         "used": 1,

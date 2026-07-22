@@ -6,20 +6,18 @@ import {
   Button, ShareButton,
   useToast,
 } from "@m1kapp/kit";
-import { buildSeoPack, type SeoPackCategory } from "./seo-pack";
 import {
-  LOGO_SYMBOLS, isLightHex,
   type Slot, type SlotKind, type TextRenderer,
-  buildLogoSvgStr, buildLogoSvgStrForExport, buildLogoSvgStrForMaskable,
-  downloadSvg, downloadPng,
+  buildLogoSvgStr,
 } from "./logo-engine";
 import { LogoInline } from "./ui-parts";
 import { DiceIcon, HomeIcon, WandIcon } from "./ui-icons";
-import { type CharMode, type PickerMode, charsForMode } from "./char-data";
+import { type PickerMode } from "./char-data";
 import {
-  LOGO_COLORS, LOGO_RADIUS, type StyleId, type StyleBaseId, STYLE_BASES,
+  LOGO_RADIUS, type StyleId, type StyleBaseId,
   resolveStyleId, resolveStyle,
 } from "./logo-styles";
+import { useLogoActions } from "./use-logo-actions";
 import { HomeView } from "./home-view";
 import { SlotPickerSection } from "./builder-slot-section";
 import { ColorSection, StyleSection } from "./builder-color-style-section";
@@ -71,114 +69,14 @@ export default function App() {
     setActiveValue({ kind, value });
   };
 
-  const randomSlot = (): Slot => {
-    const syms = LOGO_SYMBOLS.filter((s) => s.id !== "none");
-    const modes: CharMode[] = ["upper", "lower", "num", "hangul"];
-    if (Math.random() < 0.5) {
-      const m = modes[Math.floor(Math.random() * modes.length)];
-      const chars = charsForMode(m);
-      return { kind: "char", value: chars[Math.floor(Math.random() * chars.length)] };
-    }
-    return { kind: "symbol", value: syms[Math.floor(Math.random() * syms.length)].id };
-  };
-
-  const handleRandomSlots = () => {
-    setFront(randomSlot());
-    setBack(randomSlot());
-  };
-
-  // Randomize only the currently-active slot — lets user lock one side and roll the other.
-  const handleRandomActiveSlot = () => {
-    setActiveValue(randomSlot());
-  };
-
-  const handleRandomColor = () => {
-    setColor(LOGO_COLORS[Math.floor(Math.random() * LOGO_COLORS.length)].hex);
-    setColorMode(Math.random() < 0.5 ? "solid" : "gradient");
-    setStyleBase(STYLE_BASES[Math.floor(Math.random() * STYLE_BASES.length)].id);
-  };
-
-  const handleRandom = () => {
-    handleRandomSlots();
-    handleRandomColor();
-  };
-
-  const baseName = (
-    (front.kind === "char" ? front.value : "") ||
-    (back.kind === "char" ? back.value : "") ||
-    "logo"
-  ).toLowerCase();
-
   const tweaks = { frontRotate, backRotate, frontScale, backScale, shadow };
-  const renderExportLogo = (size: number) =>
-    buildLogoSvgStrForExport(
-      front, back, scheme.bg, LOGO_RADIUS, size,
-      scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, tweaks,
-    );
-
-  const handleDownloadSvg = async () => {
-    const filename = `${baseName}.svg`;
-    try {
-      const svg = await renderExportLogo(512);
-      downloadSvg(svg, filename);
-      toast(`${filename} 다운로드 완료`, { variant: "success" });
-    } catch {
-      toast("SVG 생성 실패 (폰트 로드 오류)", { variant: "error" });
-    }
-  };
-
-  const handleDownloadPng = async (size: number, label: string) => {
-    const filename = `${baseName}-${label}.png`;
-    try {
-      const svg = await renderExportLogo(512);
-      await downloadPng(svg, size, filename);
-      toast(`${filename} (${size}×${size}) 다운로드 완료`, { variant: "success" });
-    } catch {
-      toast("PNG 변환 실패", { variant: "error" });
-    }
-  };
-
-  const handleDownloadPack = async (category: SeoPackCategory, suffix: string) => {
-    toast("패키지 빌드 중…", { variant: "info" });
-    try {
-      const needsMaskable = category === "all" || category === "pwa";
-      const [iconSvg, maskableSvg] = await Promise.all([
-        buildLogoSvgStrForExport(
-          front, back, scheme.bg, LOGO_RADIUS, 512,
-          scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, tweaks,
-        ),
-        needsMaskable
-          ? buildLogoSvgStrForMaskable(
-              front, back, scheme.bg, 512,
-              scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, tweaks,
-            )
-          : Promise.resolve(""),
-      ]);
-      const textColor = scheme.textColor ?? (isLightHex(scheme.bg) ? "#09090b" : "#ffffff");
-      const zipBytes = await buildSeoPack({
-        iconSvg,
-        maskableSvg,
-        brandName: ogTitle,
-        slogan: ogDesc,
-        bgColor: scheme.bg,
-        bgGradEnd: scheme.bgGradEnd,
-        textColor,
-      }, category);
-      const blob = new Blob([zipBytes as BlobPart], { type: "application/zip" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const filename = `logodown-${baseName}-${suffix}.zip`;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      const sizeKb = Math.round(zipBytes.byteLength / 1024);
-      toast(`${filename} (${sizeKb}KB) 다운로드 완료`, { variant: "success" });
-    } catch (e) {
-      console.error(e);
-      toast("패키지 빌드 실패", { variant: "error" });
-    }
-  };
+  const {
+    handleRandom, handleRandomActiveSlot, handleRandomColor,
+    handleDownloadSvg, handleDownloadPng, handleDownloadPack,
+  } = useLogoActions({
+    front, back, scheme, tweaks, ogTitle, ogDesc, toast,
+    setFront, setBack, setActiveValue, setColor, setColorMode, setStyleBase,
+  });
 
   const cellCls = (active: boolean) =>
     `w-10 h-10 flex items-center justify-center rounded-lg font-bold text-[13px] cursor-pointer transition-all select-none shrink-0 ${

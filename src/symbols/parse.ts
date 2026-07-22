@@ -9,14 +9,19 @@ function num(el: Element, attr: string, fallback = 0): number {
   return Number(el.getAttribute(attr) || fallback);
 }
 
+// 타원(원 포함)을 두 개의 반원 호(arc)로 그린 path 데이터. 원은 rx===ry인 특수 케이스.
+function ovalPath(cx: number, cy: number, rx: number, ry: number): string {
+  return `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy}`;
+}
+
 function circleToPath(el: Element): string {
   const cx = num(el, "cx"), cy = num(el, "cy"), r = num(el, "r");
-  return `M ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy} A ${r} ${r} 0 1 0 ${cx - r} ${cy}`;
+  return ovalPath(cx, cy, r, r);
 }
 
 function ellipseToPath(el: Element): string {
   const cx = num(el, "cx"), cy = num(el, "cy"), rx = num(el, "rx"), ry = num(el, "ry");
-  return `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy}`;
+  return ovalPath(cx, cy, rx, ry);
 }
 
 function lineToPath(el: Element): string {

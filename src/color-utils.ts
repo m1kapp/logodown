@@ -1,17 +1,28 @@
-function hexToHsl(hex: string): [number, number, number] {
+// "#rrggbb"(또는 "#rgb" 축약 아님) → [r,g,b] 0–255
+function hexToRgb255(hex: string): [number, number, number] {
   const h = hex.replace("#", "").padEnd(6, "0");
-  let r = parseInt(h.slice(0,2),16)/255, g = parseInt(h.slice(2,4),16)/255, b = parseInt(h.slice(4,6),16)/255;
-  const max = Math.max(r,g,b), min = Math.min(r,g,b);
-  let hh = 0, s = 0, l = (max+min)/2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
-    if (max===r) hh = (g-b)/d + (g<b?6:0);
-    else if (max===g) hh = (b-r)/d + 2;
-    else hh = (r-g)/d + 4;
-    hh /= 6;
-  }
-  return [hh*360, s*100, l*100];
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+// max 채널이 어느 색이냐에 따른 색상(hue) 0–1. 무채색이면 0.
+function hueFrom(r: number, g: number, b: number, max: number, d: number): number {
+  let hh: number;
+  if (max === r) hh = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) hh = (b - r) / d + 2;
+  else hh = (r - g) / d + 4;
+  return hh / 6;
+}
+
+function hexToHsl(hex: string): [number, number, number] {
+  const [r255, g255, b255] = hexToRgb255(hex);
+  const r = r255 / 255, g = g255 / 255, b = b255 / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const hh = hueFrom(r, g, b, max, d);
+  return [hh * 360, s * 100, l * 100];
 }
 
 function hslToHex(hh: number, s: number, l: number): string {
@@ -33,10 +44,7 @@ export function autoGradientEnd(hex: string): string {
 }
 
 export function isLightHex(hex: string): boolean {
-  const h = hex.replace("#", "").padEnd(6, "0");
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
+  const [r, g, b] = hexToRgb255(hex);
   // YIQ perceived brightness (0–255)
   return (r * 299 + g * 587 + b * 114) / 1000 > 150;
 }

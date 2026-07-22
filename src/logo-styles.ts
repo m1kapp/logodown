@@ -77,11 +77,15 @@ export const STYLE_BASES: { id: StyleBaseId; label: string }[] = [
   { id: "onWhite",    label: "화이트"    },
   { id: "onBlack",    label: "다크"      },
 ];
+// base × colorMode → 실제 StyleId. 분기 대신 표로 조회.
+const STYLE_ID_BY_BASE: Record<StyleBaseId, { solid: StyleId; gradient: StyleId }> = {
+  color:      { solid: "solid",      gradient: "gradient" },
+  colorWhite: { solid: "colorWhite", gradient: "colorWhiteGrad" },
+  onWhite:    { solid: "onWhite",    gradient: "onWhiteGrad" },
+  onBlack:    { solid: "onBlack",    gradient: "onBlackGrad" },
+};
 export function resolveStyleId(base: StyleBaseId, mode: "solid" | "gradient"): StyleId {
-  if (base === "color")      return mode === "gradient" ? "gradient"      : "solid";
-  if (base === "colorWhite") return mode === "gradient" ? "colorWhiteGrad" : "colorWhite";
-  if (base === "onWhite")    return mode === "gradient" ? "onWhiteGrad"   : "onWhite";
-  return mode === "gradient" ? "onBlackGrad" : "onBlack";
+  return STYLE_ID_BY_BASE[base][mode];
 }
 
 export function resolveStyle(styleId: StyleId, color: string): {
