@@ -6,17 +6,27 @@ export type TextRenderer = (text: string, cx: number, cy: number, E: number, fgF
  * Convert a text slot to a vector <path> using opentype.js — used at download
  * time so the SVG renders identically without web-font availability.
  */
+/** 실측용 임시 폰트 크기 — 이 값으로 한 번 재고 비율만 뽑아 쓴다. */
+const PROBE_SIZE = 100;
+
 export function makePathTextRenderer(fonts: LoadedFonts): TextRenderer {
   return (text, cx, cy, E, fgFill) => {
     const displayText = (text || "A").slice(0, 3);
     const script = classifyScript(displayText);
-    const fontSize = textSlotFontSize(script, displayText.length, E);
     const font = script === "lower" ? fonts.pacifico : fonts.pretendard;
-    // Render at origin to measure bounding box, then offset so visual center
-    // lands at (cx, cy) — matches text-anchor=middle + dominant-baseline=central
-    // and naturally fixes Pacifico's per-letter ascender quirks (no manual offset needed).
-    const measure = font.getPath(displayText, 0, 0, fontSize);
-    const bbox = measure.getBoundingBox();
+
+    // 글자도 심볼과 같은 규칙 — 실제 잉크 bbox 의 긴 변을 슬롯 크기 E 에 맞춘다
+    // (contain fit). 글자 종류·개수별 divisor 추정치 대신 실측이라, W 처럼 넓은
+    // 글자가 슬롯을 넘어 옆 칸과 붙던 문제와 Pacifico 소문자의 높이 편차가
+    // 함께 해결된다.
+    const probe = font.getPath(displayText, 0, 0, PROBE_SIZE).getBoundingBox();
+    const probeW = probe.x2 - probe.x1;
+    const probeH = probe.y2 - probe.y1;
+    const longest = Math.max(probeW, probeH);
+    const fontSize = longest > 0 ? PROBE_SIZE * (E / longest) : E;
+
+    // 잰 크기로 다시 그려서 잉크 중심을 (cx, cy) 에 맞춘다.
+    const bbox = font.getPath(displayText, 0, 0, fontSize).getBoundingBox();
     const dx = cx - (bbox.x1 + bbox.x2) / 2;
     const dy = cy - (bbox.y1 + bbox.y2) / 2;
     const placed = font.getPath(displayText, dx, dy, fontSize);

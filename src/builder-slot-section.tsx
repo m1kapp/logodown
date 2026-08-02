@@ -6,7 +6,6 @@ import { type CharMode, type PickerMode, MODE_OPTIONS, charsForMode } from "./ch
 export function SlotPickerSection({
   activeSlot, setActiveSlot, pickerMode, setPickerMode, activeValue, pickFromGrid, cellCls,
   frontRotate, backRotate, setFrontRotate, setBackRotate,
-  frontScale, backScale, setFrontScale, setBackScale,
 }: {
   activeSlot: "front" | "back";
   setActiveSlot: (v: "front" | "back") => void;
@@ -19,15 +18,9 @@ export function SlotPickerSection({
   backRotate: number;
   setFrontRotate: (v: number) => void;
   setBackRotate: (v: number) => void;
-  frontScale: number;
-  backScale: number;
-  setFrontScale: (v: number) => void;
-  setBackScale: (v: number) => void;
 }) {
   const currentRotate = activeSlot === "front" ? frontRotate : backRotate;
   const setCurrentRotate = activeSlot === "front" ? setFrontRotate : setBackRotate;
-  const currentScale = activeSlot === "front" ? frontScale : backScale;
-  const setCurrentScale = activeSlot === "front" ? setFrontScale : setBackScale;
 
   return (
     <Section>
@@ -98,7 +91,8 @@ export function SlotPickerSection({
           );
         })()}
       </div>
-      {/* Rotate + Scale */}
+      {/* Rotate — 크기는 잉크 bbox 자동 정규화(logo-engine)로 대체됨. 미세조정은
+          URL `fs`/`bs` 파라미터, CLI `--fs`/`--bs` 로만 남겨둔다. */}
       <div className="flex flex-col gap-2 mt-3">
         <div className="flex items-center gap-2">
           <span className="text-[12px] font-bold text-zinc-900 tracking-tight shrink-0 w-7">회전</span>
@@ -114,24 +108,6 @@ export function SlotPickerSection({
                 }`}
               >
                 {deg}°
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] font-bold text-zinc-900 tracking-tight shrink-0 w-7">크기</span>
-          <div className="flex items-center gap-1">
-            {[1, 1.05, 1.10, 1.15, 1.20].map((s) => (
-              <button
-                key={s}
-                onClick={() => setCurrentScale(s)}
-                className={`h-8 px-2.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${
-                  currentScale === s
-                    ? "bg-zinc-900 text-white shadow-sm"
-                    : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
-                }`}
-              >
-                {s === 1 ? "1x" : `${s.toFixed(2)}x`}
               </button>
             ))}
           </div>

@@ -12,7 +12,7 @@ import { type CharMode, charsForMode } from "./char-data";
 
 type Toast = ReturnType<typeof useToast>;
 type Scheme = ReturnType<typeof resolveStyle>;
-type Tweaks = { frontRotate: number; backRotate: number; frontScale: number; backScale: number; shadow: number };
+type Tweaks = { frontRotate: number; backRotate: number; frontScale: number; backScale: number; shadow: number; strokeK: number };
 
 /** char/symbol 슬롯 하나를 랜덤 생성 — App/hook 양쪽에서 공유하는 순수 함수. */
 function randomSlot(): Slot {
@@ -87,7 +87,7 @@ export function useLogoActions(args: LogoActionsArgs) {
   const renderExportLogo = (size: number) =>
     buildLogoSvgStrForExport(
       front, back, scheme.bg, LOGO_RADIUS, size,
-      scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, tweaks,
+      scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, { ...tweaks, frame: scheme.frame },
     );
 
   const handleDownloadSvg = async () => {
@@ -119,12 +119,12 @@ export function useLogoActions(args: LogoActionsArgs) {
       const [iconSvg, maskableSvg] = await Promise.all([
         buildLogoSvgStrForExport(
           front, back, scheme.bg, LOGO_RADIUS, 512,
-          scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, tweaks,
+          scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, { ...tweaks, frame: scheme.frame },
         ),
         needsMaskable
           ? buildLogoSvgStrForMaskable(
               front, back, scheme.bg, 512,
-              scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, tweaks,
+              scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, { ...tweaks, frame: scheme.frame },
             )
           : Promise.resolve(""),
       ]);
