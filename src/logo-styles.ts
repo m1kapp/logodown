@@ -48,6 +48,7 @@ export const LOGO_COLORS = [
   { name: "telegram",  hex: "#26A5E4" },
   { name: "linkedin",  hex: "#0A66C2" },
   { name: "tiktok",    hex: "#FE2C55" },
+  { name: "youtube",   hex: "#FF0000" },
   { name: "netflix",   hex: "#E50914" },
   { name: "twitch",    hex: "#9146FF" },
   { name: "reddit",    hex: "#FF4500" },
@@ -66,16 +67,19 @@ export const LOGO_STYLES = [
   { id: "onBlackGrad", label: "dark +"   },
   { id: "colorWhite",     label: "color w"  },
   { id: "colorWhiteGrad", label: "color w+" },
+  { id: "outline",     label: "outline"  },
+  { id: "outlineGrad", label: "outline +" },
 ] as const;
 export type StyleId = typeof LOGO_STYLES[number]["id"];
 
-/** 4 base style families × {solid, gradient} colorMode = 8 actual style ids. */
-export type StyleBaseId = "color" | "colorWhite" | "onWhite" | "onBlack";
+/** 5 base style families × {solid, gradient} colorMode = 10 actual style ids. */
+export type StyleBaseId = "color" | "colorWhite" | "onWhite" | "onBlack" | "outline";
 export const STYLE_BASES: { id: StyleBaseId; label: string }[] = [
   { id: "colorWhite", label: "흰 문자"   },
   { id: "color",      label: "다크 문자" },
   { id: "onWhite",    label: "화이트"    },
   { id: "onBlack",    label: "다크"      },
+  { id: "outline",    label: "아웃라인"  },
 ];
 // base × colorMode → 실제 StyleId. 분기 대신 표로 조회.
 const STYLE_ID_BY_BASE: Record<StyleBaseId, { solid: StyleId; gradient: StyleId }> = {
@@ -83,6 +87,7 @@ const STYLE_ID_BY_BASE: Record<StyleBaseId, { solid: StyleId; gradient: StyleId 
   colorWhite: { solid: "colorWhite", gradient: "colorWhiteGrad" },
   onWhite:    { solid: "onWhite",    gradient: "onWhiteGrad" },
   onBlack:    { solid: "onBlack",    gradient: "onBlackGrad" },
+  outline:    { solid: "outline",    gradient: "outlineGrad" },
 };
 export function resolveStyleId(base: StyleBaseId, mode: "solid" | "gradient"): StyleId {
   return STYLE_ID_BY_BASE[base][mode];
@@ -93,6 +98,8 @@ export function resolveStyle(styleId: StyleId, color: string): {
   bgGradEnd?: string;
   textColor?: string;
   textGradEnd?: string;
+  /** 아웃라인 스타일 전용 — 둥근 사각 테두리 색. 없으면 테두리 없음. */
+  frame?: string;
 } {
   const WHITE = "#fafafa";
   const BLACK = "#09090b";
@@ -107,5 +114,8 @@ export function resolveStyle(styleId: StyleId, color: string): {
     case "colorWhiteGrad": return { bg: color, bgGradEnd: end, textColor: "#ffffff" };
     case "onBlack":       return { bg: BLACK, textColor: color };
     case "onBlackGrad":   return { bg: BLACK, textColor: color, textGradEnd: end };
+    // 마크다운 마크 룩 — 배경 없이 테두리 선 + 같은 색 글리프.
+    case "outline":     return { bg: "none", textColor: color, frame: color };
+    case "outlineGrad": return { bg: "none", textColor: color, textGradEnd: end, frame: color };
   }
 }

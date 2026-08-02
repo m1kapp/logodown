@@ -13,7 +13,7 @@ function hueFrom(r: number, g: number, b: number, max: number, d: number): numbe
   return hh / 6;
 }
 
-function hexToHsl(hex: string): [number, number, number] {
+export function hexToHsl(hex: string): [number, number, number] {
   const [r255, g255, b255] = hexToRgb255(hex);
   const r = r255 / 255, g = g255 / 255, b = b255 / 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -25,7 +25,7 @@ function hexToHsl(hex: string): [number, number, number] {
   return [hh * 360, s * 100, l * 100];
 }
 
-function hslToHex(hh: number, s: number, l: number): string {
+export function hslToHex(hh: number, s: number, l: number): string {
   hh /= 360; s /= 100; l /= 100;
   const q = l < 0.5 ? l*(1+s) : l+s-l*s, p = 2*l-q;
   const f = (t: number) => {
@@ -38,9 +38,19 @@ function hslToHex(hh: number, s: number, l: number): string {
   return "#"+[f(hh+1/3),f(hh),f(hh-1/3)].map(x=>Math.round(x*255).toString(16).padStart(2,"0")).join("");
 }
 
+/**
+ * 그라디언트 끝색을 시작색에서 자동으로 만든다.
+ *
+ * 색상환을 32° 돌리고 밝기를 중간 톤 쪽으로 민다. 실제 브랜드 그라디언트
+ * (Tinder +9, Instagram +6~16)가 전부 밝아지는 방향인 반면, 색상환을 돌리면서
+ * 동시에 어둡게 하면 채도가 죽어 겨자·올리브색으로 떨어지기 때문.
+ * 다만 아주 어두운 색/아주 밝은 색은 같은 방향으로 더 밀면 색 정체성이
+ * 흐려지므로 중간 밝기 쪽으로 좁게 움직인다.
+ */
 export function autoGradientEnd(hex: string): string {
   const [hh, s, l] = hexToHsl(hex);
-  return hslToHex((hh + 45) % 360, Math.min(s, 90), Math.max(l - 8, 25));
+  const end = l < 30 ? l + 12 : l > 72 ? l - 6 : Math.min(l + 10, 72);
+  return hslToHex((hh + 32) % 360, Math.min(s, 95), end);
 }
 
 export function isLightHex(hex: string): boolean {
