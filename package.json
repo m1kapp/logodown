@@ -1,6 +1,7 @@
 {
   "name": "@m1kapp/logodown",
   "version": "0.0.1",
+  "private": true,
   "type": "module",
   "bin": {
     "logodown": "dist-cli/logodown.mjs"
