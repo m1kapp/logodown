@@ -17,15 +17,28 @@ export type TextRenderer = ((text: string, cx: number, cy: number, H: number, fg
 /** 실측용 임시 폰트 크기 — 이 값으로 한 번 재고 비율만 뽑아 쓴다. */
 const PROBE_SIZE = 100;
 
+/**
+ * 글자 사이를 좁히는 양(em). 기본 자간 그대로 두면 글리프 사이 잉크 간격이
+ * 라틴·숫자는 잉크 높이의 11~12%, 한글은 4% 로 세 배 가까이 벌어진다. 한 슬롯
+ * 안의 글자들은 한 덩어리로 읽혀야 하므로 라틴·숫자만 한글 수준으로 좁힌다.
+ * Pacifico(소문자)는 필기체라 좁히면 획이 겹쳐서 건드리지 않는다.
+ */
+const LETTER_SPACING: Record<TextScript, number> = {
+  other: -0.05,
+  hangul: 0,
+  lower: 0,
+};
+
 export function makePathTextRenderer(fonts: LoadedFonts): TextRenderer {
   const fontFor = (text: string) =>
     classifyScript(text) === "lower" ? fonts.pacifico : fonts.pretendard;
   const clip = (text: string) => (text || "A").slice(0, 3);
+  const optsFor = (text: string) => ({ letterSpacing: LETTER_SPACING[classifyScript(text)] });
 
   /** PROBE_SIZE 기준 잉크 bbox — 비율만 쓰므로 절대 크기는 의미 없다. */
   const measure = (text: string) => {
     const t = clip(text);
-    const b = fontFor(t).getPath(t, 0, 0, PROBE_SIZE).getBoundingBox();
+    const b = fontFor(t).getPath(t, 0, 0, PROBE_SIZE, optsFor(t)).getBoundingBox();
     return { w: b.x2 - b.x1, h: b.y2 - b.y1 };
   };
 
@@ -38,12 +51,13 @@ export function makePathTextRenderer(fonts: LoadedFonts): TextRenderer {
     // (-20.6~+15.9%p) 가 사라지고 어떤 글자든 심볼과 위아래 끝이 맞는다.
     const probe = measure(displayText);
     const fontSize = probe.h > 0 ? PROBE_SIZE * (H / probe.h) : H;
+    const opts = optsFor(displayText);
 
     // 잰 크기로 다시 그려서 잉크 중심을 (cx, cy) 에 맞춘다.
-    const bbox = font.getPath(displayText, 0, 0, fontSize).getBoundingBox();
+    const bbox = font.getPath(displayText, 0, 0, fontSize, opts).getBoundingBox();
     const dx = cx - (bbox.x1 + bbox.x2) / 2;
     const dy = cy - (bbox.y1 + bbox.y2) / 2;
-    const placed = font.getPath(displayText, dx, dy, fontSize);
+    const placed = font.getPath(displayText, dx, dy, fontSize, opts);
     const fillEsc = fgFill.replace(/"/g, "&quot;");
     return `<path d="${placed.toPathData(2)}" fill="${fillEsc}"/>`;
   };
