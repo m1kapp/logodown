@@ -1,5 +1,6 @@
 import type { SeoPackInput } from "./seo-pack";
 import { packIco } from "./build-ico";
+import { buildOgSvgStr } from "./og-image";
 
 /* ── shared: SVG string → loaded <img>, and <canvas> → PNG bytes ─ */
 
@@ -69,51 +70,25 @@ export async function buildMaskablePng(maskableSvg: string, bgColor: string, siz
 }
 
 /* ── OG image (1200×630, logo + brand + slogan) ──────────────── */
+/**
+ * OG 카드. 레이아웃과 글자는 `og-image.ts` 가 SVG 로 만들고 여기서는 래스터화만
+ * 한다 — canvas 에 직접 그리면 실행 환경 폰트에 따라 결과가 달라져서 CLI 와
+ * 어긋난다.
+ */
 export async function buildOgImage(input: SeoPackInput): Promise<Uint8Array> {
-  const W = 1200, H = 630;
-  const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("no 2d context");
-
-  // Background — gradient if provided, else solid
-  if (input.bgGradEnd) {
-    const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, input.bgColor);
-    g.addColorStop(1, input.bgGradEnd);
-    ctx.fillStyle = g;
-  } else {
-    ctx.fillStyle = input.bgColor;
-  }
-  ctx.fillRect(0, 0, W, H);
-
-  // Logo — big square on the left
-  const logoSize = 320;
-  const logoX = 110;
-  const logoY = (H - logoSize) / 2;
-  const { img, revoke } = await loadSvgImage(input.iconSvg, "og logo load failed");
+  const svg = await buildOgSvgStr(input);
+  const { img, revoke } = await loadSvgImage(svg, "og svg load failed");
   try {
-    ctx.drawImage(img, logoX, logoY, logoSize, logoSize);
+    const canvas = document.createElement("canvas");
+    canvas.width = 1200;
+    canvas.height = 630;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no 2d context");
+    ctx.drawImage(img, 0, 0, 1200, 630);
+    return await canvasToPngBytes(canvas);
   } finally {
     revoke();
   }
-
-  // Wordmark + slogan on the right
-  const textX = logoX + logoSize + 70;
-  ctx.fillStyle = input.textColor;
-  ctx.textBaseline = "alphabetic";
-
-  ctx.font = `900 110px -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif`;
-  ctx.fillText(input.brandName, textX, H / 2 - 20);
-
-  ctx.font = `500 32px -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif`;
-  ctx.fillStyle = input.textColor;
-  ctx.globalAlpha = 0.7;
-  ctx.fillText(input.slogan, textX, H / 2 + 30);
-  ctx.globalAlpha = 1;
-
-  return canvasToPngBytes(canvas);
 }
 
 /* ── ICO (multi-size PNG container) ──────────────────────────── */

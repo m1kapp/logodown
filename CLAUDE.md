@@ -46,6 +46,7 @@ logodown/
 │   ├── color-utils.ts        ← hex/hsl + autoGradientEnd
 │   ├── logo-guides.tsx       ← 미리보기 가이드 오버레이
 │   ├── url-state.ts          ← URL 파라미터 파서 (웹/CLI 공용)
+│   ├── og-image.ts           ← OG 카드 레이아웃(SVG). 웹/CLI 공용
 │   ├── seo-pack*.ts, canvas-render.ts, build-ico.ts  ← 브라우저 다운로드 경로
 │   ├── App.tsx, home-*.tsx, builder-*.tsx, ui-*.tsx  ← UI
 │   └── use-logo-actions.ts   ← 랜덤·다운로드 핸들러
@@ -111,6 +112,13 @@ logodown/
 없어서 배치가 틀리고 결과물과 어긋나기 때문. **폰트 로드 전에는 가이드 버튼이
 비활성** — 그 상태의 가이드는 거짓말이 된다.
 
+## OG 이미지
+
+`og-image.ts` 의 `buildOgSvgStr()` 이 1200×630 카드를 SVG 로 만들고, 브라우저는
+canvas 로 CLI 는 resvg 로 굽기만 한다. 글자는 opentype path 변환 — canvas
+`fillText` 나 `<text>` 를 쓰면 실행 환경에 폰트가 있어야 해서 웹과 CLI 결과가
+달라진다.
+
 ## 색
 
 `autoGradientEnd()` 가 시작색에서 끝색을 만든다 — 색상환 +32°, 밝기는 중간 톤 쪽.
@@ -154,11 +162,8 @@ tsc/tsx 로는 실행되지 않는다. 같은 이유로 `npm run bbox` 도 Vite 
 
 ## 남은 작업
 
-- [ ] **OG 이미지가 CLI 에 없다** — 브라우저판 `buildOgImage()` 는 canvas 에 텍스트를
-      직접 그린다. 지금은 opentype path 렌더러가 있으니 1200×630 SVG 로 만들어
-      resvg 로 구우면 된다. 그러면 canvas 폰트 의존도 사라진다
-- [ ] `canvas-render.ts` 와 `cli/raster.ts` 가 같은 일을 두 번 한다. SVG 기반으로
-      통일하면 한쪽으로 합칠 수 있다
+- [ ] `canvas-render.ts` 와 `cli/raster.ts` 가 같은 일을 두 번 한다. 레이아웃은
+      이미 SVG 로 통일했고 남은 건 래스터화뿐이라, 한쪽으로 합칠 여지가 있다
 
 ## 관련 프로젝트
 

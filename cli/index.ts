@@ -12,6 +12,7 @@ import { LOGO_RADIUS, resolveStyle, resolveStyleId, type StyleBaseId } from "../
 import { parseUrlState } from "../src/url-state";
 import { packIco } from "../src/build-ico";
 import { F, buildManifest, buildHeadSnippet, buildReadme } from "../src/seo-pack-files";
+import { buildOgSvgStr } from "../src/og-image";
 import { charsForMode } from "../src/char-data";
 import { renderPng, renderPngPadded } from "./raster";
 
@@ -196,6 +197,7 @@ export async function main(argv = process.argv.slice(2)) {
       bgColor: scheme.bg, bgGradEnd: scheme.bgGradEnd,
       textColor: scheme.textColor ?? "#ffffff",
     };
+    await put(F.og, renderPng(await buildOgSvgStr(packInput), 1200));
     await put(F.manifest, buildManifest(packInput));
     await put(F.head, buildHeadSnippet(packInput));
     await put(F.readme, buildReadme(packInput));
