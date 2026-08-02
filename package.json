@@ -1,15 +1,25 @@
 {
   "name": "@m1kapp/logodown",
-  "private": true,
+  "version": "0.0.1",
   "type": "module",
+  "bin": {
+    "logodown": "dist-cli/logodown.mjs"
+  },
+  "files": [
+    "dist-cli"
+  ],
   "scripts": {
     "stats": "m1kkit stats --dir=src --out=public",
     "dev": "m1kkit stats --dir=src --out=public || true && vite",
     "build": "m1kkit stats --dir=src --out=public || true && vite build",
+    "bbox": "vite build --config vite.bbox.config.ts && node dist-bbox/gen-symbol-bbox.mjs",
+    "build:cli": "vite build --config vite.cli.config.ts",
+    "prepublishOnly": "npm run build:cli",
     "preview": "vite preview"
   },
   "dependencies": {
     "@m1kapp/kit": "^0.0.37",
+    "@resvg/resvg-js": "^2.6.2",
     "fflate": "^0.8.2",
     "opentype.js": "^1.3.4",
     "react": "^19.0.0",
