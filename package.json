@@ -14,7 +14,7 @@
     "build": "m1kkit stats --dir=src --out=public || true && vite build",
     "bbox": "vite build --config vite.bbox.config.ts && node dist-bbox/gen-symbol-bbox.mjs",
     "build:cli": "vite build --config vite.cli.config.ts",
-    "prepublishOnly": "npm run build:cli",
+    "prepare": "npm run build:cli",
     "preview": "vite preview"
   },
   "dependencies": {
