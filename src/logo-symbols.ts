@@ -44,7 +44,7 @@ export const LOGO_SYMBOLS: Array<{ id: string; label: string; d?: string | strin
   { id: "wave2",  label: "wave2", vb: 24, d: "M0 5 C8 -1 16 11 24 5 L24 9 C16 15 8 3 0 9Z M0 14 C8 8 16 20 24 14 L24 18 C16 24 8 12 0 18Z" },
   { id: "hex",    label: "hex",   vb: 24, d: "M22 12 L17 21 L7 21 L2 12 L7 3 L17 3Z" },
   { id: "dbox",   label: "dbox",  vb: 24, d: "M6 1 L11 6 L6 11 L1 6Z M18 1 L23 6 L18 11 L13 6Z M6 13 L11 18 L6 23 L1 18Z M18 13 L23 18 L18 23 L13 18Z" },
-  { id: "flame",  label: "flame", vb: 24, d: "M12 1 C6 5 3 11 4 17 C5 22 8 24 12 24 C16 24 19 22 20 17 C21 11 18 5 12 1Z" },
+  { id: "flame",  label: "flame", vb: 24, d: "M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4" },
   // ── 점 링 패밀리
   { id: "dots4", label: "dots4", vb: 100, d: "M38 12A12 12 0 1 0 62 12A12 12 0 1 0 38 12Z M76 50A12 12 0 1 0 100 50A12 12 0 1 0 76 50Z M38 88A12 12 0 1 0 62 88A12 12 0 1 0 38 88Z M0 50A12 12 0 1 0 24 50A12 12 0 1 0 0 50Z" },
   { id: "dots5", label: "dots5", vb: 100, d: "M40 12A10 10 0 1 0 60 12A10 10 0 1 0 40 12Z M76 38A10 10 0 1 0 96 38A10 10 0 1 0 76 38Z M62 81A10 10 0 1 0 82 81A10 10 0 1 0 62 81Z M18 81A10 10 0 1 0 38 81A10 10 0 1 0 18 81Z M4 38A10 10 0 1 0 24 38A10 10 0 1 0 4 38Z" },
