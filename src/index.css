@@ -1,4 +1,6 @@
-@import "tailwindcss";
+/* source("../src") — 자동 감지를 src/ 로 한정한다. 기본값은 프로젝트 전체를
+   훑어서 dist-cli/dist-bbox 같은 빌드 산출물까지 스캔 대상이 된다. */
+@import "tailwindcss" source("../src");
 
 html {
   font-family: "Pretendard Variable", "Pretendard", system-ui, -apple-system, sans-serif, "Tossface";
