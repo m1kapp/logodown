@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { zipSync } from "fflate";
 import {
   type Slot,
   buildLogoSvgStrForExport,
@@ -38,6 +39,7 @@ logodown — 터미널에서 로고·파비콘 만들기
 
 출력
   -o, --out <dir>       출력 폴더 (기본 ./logodown-out)
+  -z, --zip             낱개 파일 대신 <out>/logodown.zip 하나로 묶기
       --size <px>       icon.svg 크기 (기본 512)
       --svg-only        SVG만. PNG/ICO/manifest 생략
       --name <str>      manifest/OG 브랜드명 (기본 logodown)
@@ -155,6 +157,7 @@ export async function main(argv = process.argv.slice(2)) {
   const size = num(pick(a, "size"), 16, 4096) ?? 512;
   const outDir = resolve(process.cwd(), pick(a, "out", "o") ?? "logodown-out");
   const svgOnly = a.flags.has("svg-only");
+  const asZip = a.flags.has("zip") || a.flags.has("z");
   const brandName = pick(a, "name") ?? u.ogTitle ?? "logodown";
   const slogan = pick(a, "slogan") ?? u.ogDesc ?? "Make logos like markdown logo";
 
@@ -165,14 +168,13 @@ export async function main(argv = process.argv.slice(2)) {
     scheme.bgGradEnd, scheme.textColor, scheme.textGradEnd, { ...tweaks, frame: scheme.frame },
   );
 
-  await mkdir(outDir, { recursive: true });
-  const written: string[] = [];
-  const put = async (name: string, data: string | Uint8Array) => {
-    await writeFile(resolve(outDir, name), data);
-    written.push(name);
+  const enc = new TextEncoder();
+  const files: Record<string, Uint8Array> = {};
+  const put = (name: string, data: string | Uint8Array) => {
+    files[name] = typeof data === "string" ? enc.encode(data) : data;
   };
 
-  await put(F.svg, iconSvg);
+  put(F.svg, iconSvg);
 
   if (!svgOnly) {
     const maskableSvg = await buildLogoSvgStrForMaskable(
@@ -184,27 +186,39 @@ export async function main(argv = process.argv.slice(2)) {
     const [p16, p32, p48, p180, p192, p512] =
       [16, 32, 48, 180, 192, 512].map(png);
 
-    await put(F.fav16, p16);
-    await put(F.fav32, p32);
-    await put(F.appleTouch, p180);
-    await put(F.pwa192, p192);
-    await put(F.pwa512, p512);
-    await put(F.maskable, renderPngPadded(maskableSvg, 512, 0.8, scheme.bg));
-    await put(F.ico, packIco([16, 32, 48], [p16, p32, p48]));
+    put(F.fav16, p16);
+    put(F.fav32, p32);
+    put(F.appleTouch, p180);
+    put(F.pwa192, p192);
+    put(F.pwa512, p512);
+    put(F.maskable, renderPngPadded(maskableSvg, 512, 0.8, scheme.bg));
+    put(F.ico, packIco([16, 32, 48], [p16, p32, p48]));
 
     const packInput = {
       iconSvg, maskableSvg, brandName, slogan,
       bgColor: scheme.bg, bgGradEnd: scheme.bgGradEnd,
       textColor: scheme.textColor ?? "#ffffff",
     };
-    await put(F.og, renderPng(await buildOgSvgStr(packInput), 1200));
-    await put(F.manifest, buildManifest(packInput));
-    await put(F.head, buildHeadSnippet(packInput));
-    await put(F.readme, buildReadme(packInput));
+    put(F.og, renderPng(await buildOgSvgStr(packInput), 1200));
+    put(F.manifest, buildManifest(packInput));
+    put(F.head, buildHeadSnippet(packInput));
+    put(F.readme, buildReadme(packInput));
   }
 
+  await mkdir(outDir, { recursive: true });
   const label = (s: Slot) => `${s.kind}:${s.value}`;
   console.log(`logodown — ${label(front)} + ${label(back)} · ${color}${colorMode === "gradient" ? " (gradient)" : ""}`);
-  console.log(`${outDir}\n${written.map((f) => `  ${f}`).join("\n")}`);
+
+  if (asZip) {
+    const zipBytes = zipSync(files, { level: 6 });
+    const zipPath = resolve(outDir, "logodown.zip");
+    await writeFile(zipPath, zipBytes);
+    console.log(`${zipPath}  (${Object.keys(files).length}개 파일, ${(zipBytes.length / 1024).toFixed(0)}KB)`);
+  } else {
+    await Promise.all(
+      Object.entries(files).map(([name, data]) => writeFile(resolve(outDir, name), data)),
+    );
+    console.log(`${outDir}\n${Object.keys(files).map((f) => `  ${f}`).join("\n")}`);
+  }
   if (svgOnly) console.log("\n(--svg-only: PNG/ICO 생략)");
 }
