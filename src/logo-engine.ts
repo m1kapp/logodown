@@ -26,23 +26,71 @@ export type SlotKind = "char" | "symbol";
 export type Slot = { kind: SlotKind; value: string };
 
 /**
- * 슬롯 배치 규격 — 캔버스 한 변 대비 비율.
+ * 배치 규격 — 캔버스 한 변 대비 비율.
  *
- * 2슬롯 그룹 폭 = slot + gap + slot = 0.66. Android 적응형 아이콘의 세이프존
- * (108dp 중 72dp = 66%) 과 같은 값이라 어떤 마스크에도 잘리지 않는다.
+ * `height` 는 모든 슬롯이 공유하는 기준 높이(캡 하이트). 폭은 슬롯마다 다르다.
+ * `maxGroup` 은 Android 적응형 아이콘의 세이프존(108dp 중 72dp = 66%) 과 같은
+ * 값이라, 그룹이 이 폭을 넘지 않는 한 어떤 마스크에도 잘리지 않는다.
  */
-export const LAYOUT = { slot: 0.30, gap: 0.06 } as const;
+export const LAYOUT = { height: 0.30, gap: 0.06, maxGroup: 0.66 } as const;
 
-/** 슬롯 중심 좌표와 크기. 렌더와 가이드 오버레이가 같은 값을 쓰도록 여기 한 곳에서만 계산한다. */
-export function slotLayout(size: number, slotCount: number) {
-  const E = size * LAYOUT.slot;
+/** 잉크 가로세로비(w/h). 표에 없거나 링이면 1. */
+function symbolAspect(id: string): number {
+  const sym = SYMBOL_MAP.get(id);
+  if (!sym || sym.isRing) return 1;
+  const ink = SYMBOL_INK[id];
+  if (!ink) return 1;
+  const h = ink[3] - ink[1];
+  return h > 0 ? (ink[2] - ink[0]) / h : 1;
+}
+
+function slotAspect(slot: Slot, textRenderer?: TextRenderer): number {
+  if (slot.kind === "symbol") return symbolAspect(slot.value);
+  const m = textRenderer?.measure?.(slot.value);
+  return m && m.h > 0 ? m.w / m.h : 1;
+}
+
+export type SlotBox = { cx: number; cy: number; w: number; h: number };
+
+/**
+ * 슬롯 배치. 고정 격자가 아니라 **각 슬롯의 실제 잉크 폭**으로 자리를 잡는다.
+ *
+ * 모든 슬롯을 같은 높이에 맞추고 폭은 각자 다르게 둔 뒤, 그룹이 세이프존을
+ * 넘으면 전체를 같은 비율로 줄인다. 고정 격자에서는 "59" 처럼 가로로 긴 글자를
+ * 칸에 가두느라 높이를 0.59배로 깎아야 했는데(옆 칸 심볼과 눈에 띄게 어긋남),
+ * 이렇게 하면 높이는 항상 같고 충돌도 생기지 않는다.
+ *
+ * 렌더와 가이드 오버레이가 같은 값을 쓰도록 여기 한 곳에서만 계산한다.
+ * `textRenderer.measure` 가 없으면(폰트 로드 전 <text> 폴백) 모든 글자를
+ * 정사각으로 가정한다.
+ */
+export function layoutSlots(
+  size: number,
+  slots: { slot: Slot; scale: number }[],
+  textRenderer?: TextRenderer,
+): { boxes: SlotBox[]; height: number; gap: number; groupW: number; cy: number } {
+  const cy = size / 2;
+  const baseH = size * LAYOUT.height;
   const gap = size * LAYOUT.gap;
-  const groupW = slotCount === 2 ? E + gap + E : E;
-  const left = (size - groupW) / 2;
-  return {
-    E, gap, groupW, cy: size / 2,
-    cxs: Array.from({ length: slotCount }, (_, i) => left + E / 2 + i * (E + gap)),
-  };
+
+  const raw = slots.map(({ slot, scale }) => {
+    const h = baseH * scale;
+    return { h, w: h * slotAspect(slot, textRenderer) };
+  });
+
+  const natural = raw.reduce((a, r) => a + r.w, 0) + gap * Math.max(raw.length - 1, 0);
+  const k = natural > size * LAYOUT.maxGroup ? (size * LAYOUT.maxGroup) / natural : 1;
+
+  const groupW = natural * k;
+  let x = (size - groupW) / 2;
+  const boxes: SlotBox[] = raw.map((r) => {
+    const w = r.w * k, h = r.h * k;
+    const box = { cx: x + w / 2, cy, w, h };
+    x += w + gap * k;
+    return box;
+  });
+
+  return { boxes, height: baseH * k, gap: gap * k, groupW, cy };
 }
 
 export function isSlotFilled(s: Slot): boolean {
@@ -66,27 +114,26 @@ export const STROKE_WEIGHTS = {
 } as const;
 export type StrokeWeight = keyof typeof STROKE_WEIGHTS;
 
-function renderSymbolSlot(symbolId: string, cx: number, cy: number, E: number, fgFill: string, ringInner: string, userRotate = 0, userScale = 1, strokeK: number = STROKE_WEIGHTS.regular): string {
+function renderSymbolSlot(symbolId: string, cx: number, cy: number, H: number, fgFill: string, ringInner: string, userRotate = 0, strokeK: number = STROKE_WEIGHTS.regular): string {
   const sym = SYMBOL_MAP.get(symbolId);
   if (!sym || symbolId === "none" || (!sym.d && !sym.isRing)) return "";
-  const sE = E * userScale;
   if (sym.isRing) {
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(sE*0.50).toFixed(1)}" fill="${fgFill}"/><circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(sE*0.29).toFixed(1)}" fill="${ringInner}"/>`;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(H*0.50).toFixed(1)}" fill="${fgFill}"/><circle cx="${cx.toFixed(1)}" cy="${cy}" r="${(H*0.29).toFixed(1)}" fill="${ringInner}"/>`;
   }
   const vb = sym.vb ?? 100;
-  // viewBox 가 아니라 실제 잉크 bbox 를 슬롯 박스에 맞춘다 — 그리드 여백이
-  // 심볼마다 달라서(lucide 2px, flame 세로 17/24) viewBox 기준으로 맞추면
+  // viewBox 가 아니라 실제 잉크 bbox 의 높이를 기준 높이 H 에 맞춘다 — 그리드
+  // 여백이 심볼마다 달라서(lucide 2px, flame 세로 17/24) viewBox 기준으로 맞추면
   // 글자 옆에 놓았을 때 크기가 제각각으로 보인다. 표는 `npm run bbox` 로 생성.
   const [ix0, iy0, ix1, iy1] = SYMBOL_INK[symbolId] ?? [0, 0, 1, 1];
-  const inkW = (ix1 - ix0) * vb, inkH = (iy1 - iy0) * vb;
-  const sc = sE / Math.max(inkW, inkH);
+  const inkH = (iy1 - iy0) * vb;
+  const sc = H / inkH;
   const tx = cx - ((ix0 + ix1) / 2) * vb * sc;
   const ty = cy - ((iy0 + iy1) / 2) * vb * sc;
   const fr = sym.fillRule ? ` fill-rule="${sym.fillRule}"` : "";
-  // 선폭은 심볼 원본 값이 아니라 슬롯 크기 기준으로 환산 — 배율(sc)로 나눠서
+  // 선폭은 심볼 원본 값이 아니라 기준 높이로 환산 — 배율(sc)로 나눠서
   // 최종 렌더 결과가 어떤 심볼이든 같은 굵기가 되게 한다.
   const pathAttrs = sym.stroke
-    ? `fill="none" stroke="${fgFill}" stroke-width="${(sE * strokeK / sc).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"`
+    ? `fill="none" stroke="${fgFill}" stroke-width="${(H * strokeK / sc).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"`
     : `fill="${fgFill}"${fr}`;
   const dList = Array.isArray(sym.d) ? sym.d : [sym.d as string];
   const paths = dList.map((d) => `<path d="${d}" ${pathAttrs}/>`).join("");
@@ -123,19 +170,21 @@ function buildDefsBlock(opts: {
   return { defsEl: defsInner ? `<defs>${defsInner}</defs>` : "", shadowCfg };
 }
 
-/** char 슬롯의 회전/스케일은 <g transform>으로 감싸고, symbol 슬롯은 renderSymbolSlot이 자체 처리 */
+/**
+ * 슬롯 하나를 그린다. 크기는 layoutSlots 가 정한 박스 높이로 이미 결정돼 있고,
+ * 회전만 여기서 처리한다(심볼은 renderSymbolSlot 이 자체 회전을 합산).
+ */
 function renderSlotElement(
-  slot: Slot, cx: number, cy: number, E: number, fgFill: string, ringInner: string,
-  rot: number, sc: number, textRenderer: TextRenderer, strokeK: number,
+  slot: Slot, box: SlotBox, fgFill: string, ringInner: string,
+  rot: number, textRenderer: TextRenderer, strokeK: number,
 ): string {
-  const inner = slot.kind === "char"
-    ? textRenderer(slot.value, cx, cy, E, fgFill)
-    : renderSymbolSlot(slot.value, cx, cy, E, fgFill, ringInner, rot, sc, strokeK);
-  if (slot.kind !== "char" || (rot === 0 && sc === 1)) return inner;
-  const transforms: string[] = [];
-  if (rot !== 0) transforms.push(`rotate(${rot}, ${cx.toFixed(1)}, ${cy.toFixed(1)})`);
-  if (sc !== 1) transforms.push(`translate(${cx.toFixed(1)}, ${cy.toFixed(1)}) scale(${sc}) translate(${(-cx).toFixed(1)}, ${(-cy).toFixed(1)})`);
-  return `<g transform="${transforms.join(" ")}">${inner}</g>`;
+  if (slot.kind !== "char") {
+    return renderSymbolSlot(slot.value, box.cx, box.cy, box.h, fgFill, ringInner, rot, strokeK);
+  }
+  const inner = textRenderer(slot.value, box.cx, box.cy, box.h, fgFill);
+  return rot === 0
+    ? inner
+    : `<g transform="rotate(${rot}, ${box.cx.toFixed(1)}, ${box.cy.toFixed(1)})">${inner}</g>`;
 }
 
 export function buildLogoSvgStr(
@@ -157,9 +206,9 @@ export function buildLogoSvgStr(
   if (isSlotFilled(back)) slots.push({ slot: back, rotate: options?.backRotate ?? 0, scale: options?.backScale ?? 1 });
   if (slots.length === 0) slots.push({ slot: { kind: "char", value: "A" }, rotate: 0, scale: 1 });
 
-  const { E, cy, cxs } = slotLayout(size, slots.length);
-
   const textRenderer = options?.textRenderer ?? renderTextSlot;
+  const { boxes } = layoutSlots(size, slots, textRenderer);
+
   const embedFontImports = options?.embedFonts ?? !options?.textRenderer;
   const charSlots = slots.filter((s) => s.slot.kind === "char");
   const fontImports = buildFontImportsBlock(charSlots, embedFontImports);
@@ -173,7 +222,7 @@ export function buildLogoSvgStr(
   const ringInner = gradientEnd ?? bg;
 
   const slotElements = slots
-    .map(({ slot, rotate: rot, scale: sc }, i) => renderSlotElement(slot, cxs[i], cy, E, fgFill, ringInner, rot, sc, textRenderer, options?.strokeK ?? STROKE_WEIGHTS.regular))
+    .map(({ slot, rotate: rot }, i) => renderSlotElement(slot, boxes[i], fgFill, ringInner, rot, textRenderer, options?.strokeK ?? STROKE_WEIGHTS.regular))
     .join("");
 
   // 아웃라인 스타일: 배경 대신 둥근 사각 테두리. 선이 잘리지 않게 선폭의 절반만큼 안으로 넣는다.

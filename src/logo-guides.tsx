@@ -1,4 +1,4 @@
-import { isSlotFilled, slotLayout, type Slot } from "./logo-engine";
+import { isSlotFilled, layoutSlots, LAYOUT, type Slot, type TextRenderer } from "./logo-engine";
 import { LOGO_RADIUS } from "./logo-styles";
 
 /* ══════════════════════════════════════════════
@@ -10,25 +10,28 @@ import { LOGO_RADIUS } from "./logo-styles";
 const C = {
   safe: "#22d3ee",   // Android 적응형 세이프존 66%
   mask: "#a78bfa",   // maskable PNG 세이프 영역 80%
-  slot: "#f43f5e",   // 슬롯 박스 E×E
-  axis: "#facc15",   // 중심축
+  slot: "#f43f5e",   // 슬롯 잉크 박스
+  axis: "#facc15",   // 중심축 + 기준 높이
 } as const;
 
 export const GUIDE_LEGEND: { color: string; label: string }[] = [
-  { color: C.slot, label: "슬롯 30%" },
+  { color: C.slot, label: "잉크 박스" },
+  { color: C.axis, label: "기준 높이 30%" },
   { color: C.safe, label: "세이프존 66%" },
   { color: C.mask, label: "maskable 80%" },
-  { color: C.axis, label: "중심축" },
 ];
 
-export function LogoGuides({ front, back, className }: {
+export function LogoGuides({ front, back, textRenderer, className }: {
   front: Slot;
   back: Slot;
+  textRenderer?: TextRenderer;
   className?: string;
 }) {
   const S = 100; // 오버레이 전용 좌표계 — 실제 렌더 크기와 무관
-  const slotCount = [front, back].filter(isSlotFilled).length || 1;
-  const { E, cy, cxs, groupW } = slotLayout(S, slotCount);
+  const filled = [front, back].filter(isSlotFilled);
+  const slots = (filled.length ? filled : [{ kind: "char", value: "A" } as Slot])
+    .map((slot) => ({ slot, scale: 1 }));
+  const { boxes, height, cy, groupW } = layoutSlots(S, slots, textRenderer);
   const r = S * LOGO_RADIUS;
 
   const band = (ratio: number, color: string) => {
@@ -55,18 +58,22 @@ export function LogoGuides({ front, back, className }: {
       {band(0.8, C.mask)}
       {band(0.66, C.safe)}
 
-      {/* 슬롯 박스 + 슬롯별 중심 */}
-      {cxs.map((cx, i) => (
-        <g key={i}>
-          <rect
-            x={cx - E / 2} y={cy - E / 2} width={E} height={E}
-            fill="none" stroke={C.slot} strokeWidth={1}
-          />
-          <line x1={cx} y1={cy - E / 2} x2={cx} y2={cy + E / 2} stroke={C.slot} strokeWidth={0.5} strokeOpacity={0.6} />
-        </g>
+      {/* 기준 높이 밴드 — 모든 슬롯이 이 위아래 선에 맞는다.
+          그룹이 세이프존을 넘어 축소된 경우 height 가 줄어 밴드도 함께 좁아진다. */}
+      {[cy - height / 2, cy + height / 2].map((y) => (
+        <line key={y} x1={0} y1={y} x2={S} y2={y} stroke={C.axis} strokeWidth={0.6} strokeOpacity={0.55} strokeDasharray="4 3" />
       ))}
 
-      {/* 그룹 전체 폭 표시 */}
+      {/* 슬롯별 실제 잉크 박스 — 폭은 슬롯마다 다르다 */}
+      {boxes.map((b, i) => (
+        <rect
+          key={i}
+          x={b.cx - b.w / 2} y={b.cy - b.h / 2} width={b.w} height={b.h}
+          fill="none" stroke={C.slot} strokeWidth={1}
+        />
+      ))}
+
+      {/* 그룹 전체 폭 */}
       <line
         x1={(S - groupW) / 2} y1={S - 4} x2={(S + groupW) / 2} y2={S - 4}
         stroke={C.slot} strokeWidth={1}
@@ -75,6 +82,13 @@ export function LogoGuides({ front, back, className }: {
       {/* 중심축 */}
       <line x1={0} y1={cy} x2={S} y2={cy} stroke={C.axis} strokeWidth={0.7} strokeOpacity={0.8} />
       <line x1={S / 2} y1={0} x2={S / 2} y2={S} stroke={C.axis} strokeWidth={0.7} strokeOpacity={0.8} />
+
+      {/* 축소가 걸렸는지 표시 — 기준 높이보다 줄었으면 그룹이 세이프존에 닿았다는 뜻 */}
+      {height < S * LAYOUT.height - 0.01 && (
+        <text x={S / 2} y={7} fill={C.safe} fontSize={4.5} textAnchor="middle" fontFamily="monospace">
+          {`축소 ${(height / (S * LAYOUT.height) * 100).toFixed(0)}%`}
+        </text>
+      )}
     </svg>
   );
 }

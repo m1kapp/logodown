@@ -132,7 +132,7 @@ export default function App() {
             <div className="rounded-2xl bg-white flex flex-col items-center justify-center py-5 shadow-[0_8px_32px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.04)]">
               <div className="relative" style={{ width: previewSize, height: previewSize }}>
                 <LogoInline svgStr={logoSvgStr} displaySize={previewSize} className="shadow-2xl transition-all duration-300 overflow-hidden" style={{ borderRadius: `${rPx(previewSize)}px` }} />
-                {guides && fonts && <LogoGuides front={front} back={back} />}
+                {guides && fonts && <LogoGuides front={front} back={back} textRenderer={previewTextRenderer} />}
               </div>
 
               {guides && (

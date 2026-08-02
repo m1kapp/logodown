@@ -1,6 +1,14 @@
 import type { LoadedFonts } from "./fonts";
 
-export type TextRenderer = (text: string, cx: number, cy: number, E: number, fgFill: string) => string;
+/**
+ * 글자 슬롯을 그린다. `H` 는 잉크 높이의 목표값 — 폭은 글자 나름이다.
+ *
+ * `measure` 가 붙어 있으면 배치 단계(layoutSlots)가 그걸로 실제 가로세로비를
+ * 읽어 자리를 잡는다. 없으면(웹폰트 <text> 폴백) 정사각으로 가정한다.
+ */
+export type TextRenderer = ((text: string, cx: number, cy: number, H: number, fgFill: string) => string) & {
+  measure?: (text: string) => { w: number; h: number };
+};
 
 /**
  * Convert a text slot to a vector <path> using opentype.js — used at download
@@ -10,20 +18,26 @@ export type TextRenderer = (text: string, cx: number, cy: number, E: number, fgF
 const PROBE_SIZE = 100;
 
 export function makePathTextRenderer(fonts: LoadedFonts): TextRenderer {
-  return (text, cx, cy, E, fgFill) => {
-    const displayText = (text || "A").slice(0, 3);
-    const script = classifyScript(displayText);
-    const font = script === "lower" ? fonts.pacifico : fonts.pretendard;
+  const fontFor = (text: string) =>
+    classifyScript(text) === "lower" ? fonts.pacifico : fonts.pretendard;
+  const clip = (text: string) => (text || "A").slice(0, 3);
 
-    // 글자도 심볼과 같은 규칙 — 실제 잉크 bbox 의 긴 변을 슬롯 크기 E 에 맞춘다
-    // (contain fit). 글자 종류·개수별 divisor 추정치 대신 실측이라, W 처럼 넓은
-    // 글자가 슬롯을 넘어 옆 칸과 붙던 문제와 Pacifico 소문자의 높이 편차가
-    // 함께 해결된다.
-    const probe = font.getPath(displayText, 0, 0, PROBE_SIZE).getBoundingBox();
-    const probeW = probe.x2 - probe.x1;
-    const probeH = probe.y2 - probe.y1;
-    const longest = Math.max(probeW, probeH);
-    const fontSize = longest > 0 ? PROBE_SIZE * (E / longest) : E;
+  /** PROBE_SIZE 기준 잉크 bbox — 비율만 쓰므로 절대 크기는 의미 없다. */
+  const measure = (text: string) => {
+    const t = clip(text);
+    const b = fontFor(t).getPath(t, 0, 0, PROBE_SIZE).getBoundingBox();
+    return { w: b.x2 - b.x1, h: b.y2 - b.y1 };
+  };
+
+  const render: TextRenderer = (text, cx, cy, H, fgFill) => {
+    const displayText = clip(text);
+    const font = fontFor(displayText);
+
+    // 글자도 심볼과 같은 규칙 — 실제 잉크 높이를 기준 높이 H 에 맞춘다. 글자
+    // 종류·개수별 divisor 추정치 대신 실측이라, Pacifico 소문자의 높이 편차
+    // (-20.6~+15.9%p) 가 사라지고 어떤 글자든 심볼과 위아래 끝이 맞는다.
+    const probe = measure(displayText);
+    const fontSize = probe.h > 0 ? PROBE_SIZE * (H / probe.h) : H;
 
     // 잰 크기로 다시 그려서 잉크 중심을 (cx, cy) 에 맞춘다.
     const bbox = font.getPath(displayText, 0, 0, fontSize).getBoundingBox();
@@ -33,6 +47,9 @@ export function makePathTextRenderer(fonts: LoadedFonts): TextRenderer {
     const fillEsc = fgFill.replace(/"/g, "&quot;");
     return `<path d="${placed.toPathData(2)}" fill="${fillEsc}"/>`;
   };
+
+  render.measure = measure;
+  return render;
 }
 
 type TextScript = "lower" | "hangul" | "other";
