@@ -18,6 +18,15 @@ function inner(svgStr: string): string {
   return open < 0 || close < 0 ? svgStr : svgStr.slice(open + 1, close);
 }
 
+/** 아이콘 정의는 루트 defs로 올리고, 실제 도형은 그림자/본체에 재사용한다. */
+function splitInner(svgStr: string): { defs: string; drawable: string } {
+  const content = inner(svgStr);
+  const defs = [...content.matchAll(/<defs>([\s\S]*?)<\/defs>/g)]
+    .map((match) => match[1])
+    .join("");
+  return { defs, drawable: content.replace(/<defs>[\s\S]*?<\/defs>/g, "") };
+}
+
 function viewBoxSide(svgStr: string): number {
   const m = /viewBox="0 0 ([\d.]+) [\d.]+"/.exec(svgStr);
   return m ? Number(m[1]) : 512;
@@ -46,20 +55,24 @@ export async function buildOgSvgStr(input: SeoPackInput): Promise<string> {
   const side = viewBoxSide(input.iconSvg);
   const sc = LOGO / side;
   const logoY = (H - LOGO) / 2;
+  const icon = splitInner(input.iconSvg);
 
-  // 로고와 카드 배경이 같은 색이라 그냥 얹으면 경계가 사라진다. 그림자로 띄운다.
+  // feDropShadow는 원본 그래픽까지 필터 안에서 다시 합성해, 그라디언트 아이콘을
+  // 축소할 때 밴딩이 생긴다. SourceAlpha로 그림자만 만들고 본체는 밖에서 그린다.
   const defs = [
     input.bgGradEnd
       ? `<linearGradient id="og" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${esc(input.bgColor)}"/><stop offset="100%" stop-color="${esc(input.bgGradEnd)}"/></linearGradient>`
       : "",
-    `<filter id="ogs" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="18" flood-opacity="0.28"/></filter>`,
+    icon.defs,
+    `<filter id="ogs" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="18" result="blur"/><feOffset in="blur" dx="0" dy="10" result="offset"/><feFlood flood-color="#000000" flood-opacity="0.28" result="color"/><feComposite in="color" in2="offset" operator="in"/></filter>`,
   ].join("");
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
     `<defs>${defs}</defs>`,
     `<rect width="${W}" height="${H}" fill="${input.bgGradEnd ? "url(#og)" : esc(input.bgColor)}"/>`,
-    `<g filter="url(#ogs)"><g transform="translate(${LOGO_X},${logoY}) scale(${sc.toFixed(4)})">${inner(input.iconSvg)}</g></g>`,
+    `<g filter="url(#ogs)"><g transform="translate(${LOGO_X},${logoY}) scale(${sc.toFixed(4)})">${icon.drawable}</g></g>`,
+    `<g transform="translate(${LOGO_X},${logoY}) scale(${sc.toFixed(4)})">${icon.drawable}</g>`,
     line(input.brandName, 110, H / 2 - 45, input.textColor),
     line(input.slogan, 32, H / 2 + 45, input.textColor, 0.7),
     `</svg>`,
