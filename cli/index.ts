@@ -191,7 +191,8 @@ export async function main(argv = process.argv.slice(2)) {
     put(F.appleTouch, p180);
     put(F.pwa192, p192);
     put(F.pwa512, p512);
-    put(F.maskable, renderPngPadded(maskableSvg, 512, 0.8, scheme.bg));
+    // 꽉 채운다 — canvas-render.ts buildMaskablePng 주석
+    put(F.maskable, renderPngPadded(maskableSvg, 512, 1, scheme.bg));
     put(F.ico, packIco([16, 32, 48], [p16, p32, p48]));
 
     const packInput = {

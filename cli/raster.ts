@@ -25,7 +25,7 @@ function viewBoxSide(svgStr: string): number {
 
 /**
  * Android adaptive icon 용 maskable PNG.
- * 배경색으로 전체를 채우고 로고를 80% 크기로 가운데 배치 (10% 세이프 패딩).
+ * 배경색으로 전체를 채우고 로고를 ratio 크기로 가운데 배치.
  */
 export function renderPngPadded(
   svgStr: string,

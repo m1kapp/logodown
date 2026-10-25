@@ -8,6 +8,7 @@ import type { SeoPackInput } from "./seo-pack";
 const W = 1200, H = 630;
 const LOGO = 320, LOGO_X = 110;
 const TEXT_X = LOGO_X + LOGO + 70;
+const TEXT_MAX = W - TEXT_X - 60; // 글자가 오른쪽 끝을 넘지 않게
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 
@@ -52,6 +53,20 @@ export async function buildOgSvgStr(input: SeoPackInput): Promise<string> {
     return `<path d="${p.toPathData(2)}" fill="${esc(fill)}"${op}/>`;
   };
 
+  /** 이 폭 안에 들어가는 글자 크기(넘치면 줄인다). */
+  const fit = (text: string, size: number) => Math.min(size, (size * TEXT_MAX) / pretendard.getAdvanceWidth(text, size));
+
+  // 브랜드명이 한 줄에 80px 아래로 줄어들 만큼 길면, 띄어쓰기에서 두 줄로 나눈다(두 줄 폭이 가장 비슷한 곳)
+  let title = [input.brandName], titleSize = fit(input.brandName, 110);
+  const words = input.brandName.split(" ");
+  if (titleSize < 80 && words.length > 1) {
+    const splits = words.slice(1).map((_, i) => [words.slice(0, i + 1).join(" "), words.slice(i + 1).join(" ")]);
+    title = splits.reduce((a, b) => (Math.max(...b.map((t) => pretendard.getAdvanceWidth(t, 100))) < Math.max(...a.map((t) => pretendard.getAdvanceWidth(t, 100))) ? b : a));
+    titleSize = Math.min(96, ...title.map((t) => fit(t, 96)));
+  }
+  const lead = titleSize * 1.15;
+  const titleTop = H / 2 - (lead * (title.length - 1) + 90) / 2; // 제목 줄들 + 슬로건 묶음을 세로 가운데로
+
   const side = viewBoxSide(input.iconSvg);
   const sc = LOGO / side;
   const logoY = (H - LOGO) / 2;
@@ -73,8 +88,8 @@ export async function buildOgSvgStr(input: SeoPackInput): Promise<string> {
     `<rect width="${W}" height="${H}" fill="${input.bgGradEnd ? "url(#og)" : esc(input.bgColor)}"/>`,
     `<g filter="url(#ogs)"><g transform="translate(${LOGO_X},${logoY}) scale(${sc.toFixed(4)})">${icon.drawable}</g></g>`,
     `<g transform="translate(${LOGO_X},${logoY}) scale(${sc.toFixed(4)})">${icon.drawable}</g>`,
-    line(input.brandName, 110, H / 2 - 45, input.textColor),
-    line(input.slogan, 32, H / 2 + 45, input.textColor, 0.7),
+    ...title.map((t, i) => line(t, titleSize, titleTop + i * lead, input.textColor)),
+    line(input.slogan, fit(input.slogan, 32), titleTop + (title.length - 1) * lead + 90, input.textColor, 0.7),
     `</svg>`,
   ].join("");
 }

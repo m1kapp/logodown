@@ -45,7 +45,9 @@ export async function svgToPngBytes(svgStr: string, size: number): Promise<Uint8
   }
 }
 
-/* ── Maskable PNG (80% safe area, padded with bg color) ──────── */
+/* ── Maskable PNG (full-bleed) ──────────────────────────────────
+   예전엔 80% 로 줄이고 바깥을 단색으로 채웠는데, 그라디언트면 바깥 띠만 단색이라 액자처럼 보였다.
+   글리프 그룹은 이미 폭 66% · 높이 30% 안이라(LAYOUT) 모서리까지 반지름 36% — 안전 원(40%) 안이다. */
 export async function buildMaskablePng(maskableSvg: string, bgColor: string, size = 512): Promise<Uint8Array> {
   const canvas = document.createElement("canvas");
   canvas.width = size;
@@ -53,16 +55,11 @@ export async function buildMaskablePng(maskableSvg: string, bgColor: string, siz
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no 2d context");
 
-  // Fill full bg (the 10% padding outside the safe zone)
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, size, size);
-
-  // Draw inner logo at 80% centered
-  const inner = size * 0.8;
-  const off = size * 0.1;
   const { img, revoke } = await loadSvgImage(maskableSvg, "maskable svg load failed");
   try {
-    ctx.drawImage(img, off, off, inner, inner);
+    ctx.drawImage(img, 0, 0, size, size);
   } finally {
     revoke();
   }

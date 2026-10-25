@@ -39,6 +39,8 @@ const ORDER = [
   "coffee",
   "palette",
   "globe",
+  "plane",
+  "calculator",
   "wand",
   // concept icons
   "lightbulb",
@@ -130,6 +132,7 @@ const LABELS: Record<string, string> = {
   pocketknife: "knife",
   paintroller: "roller",
   packageopen: "pkg",
+  calculator: "calc",
 };
 
 const RAW = import.meta.glob<string>("./*.svg", {
