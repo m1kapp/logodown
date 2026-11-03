@@ -1,64 +1,67 @@
 {
-  "generatedAt": "2026-08-02T02:31:44.827Z",
-  "kitVersion": "0.0.37",
+  "generatedAt": "2026-11-03T14:46:45.161Z",
+  "kitVersion": "0.0.61",
   "source": {
     "dir": "src",
-    "files": 29,
-    "totalLines": 2900,
-    "codeLines": 2457,
+    "files": 30,
+    "totalLines": 3100,
+    "codeLines": 2585,
     "breakdown": {
       "frontend": {
         "files": 10,
-        "codeLines": 1049
+        "codeLines": 1079
       },
       "backend": {
         "files": 0,
         "codeLines": 0
       },
       "shared": {
-        "files": 19,
-        "codeLines": 1408
+        "files": 20,
+        "codeLines": 1506
       }
     }
   },
   "quality": {
     "engine": "ast2",
-    "score": 99,
-    "grade": "A+",
+    "score": 96,
+    "grade": "SS",
+    "gradeBase": "S",
+    "dead": null,
     "cognitive": {
       "avg": 0.9,
       "p90": 3,
-      "max": 12,
-      "over15": 0,
+      "max": 18,
+      "over15": 1,
       "over25": 0,
+      "top10avg": 7.3,
       "worst": [
         {
           "name": "App",
-          "cog": 12,
-          "cc": 26,
+          "cog": 18,
+          "cc": 30,
           "file": "src/App.tsx",
-          "line": 31
+          "line": 32
         },
         {
           "name": "renderSymbolSlot",
           "cog": 8,
           "cc": 13,
           "file": "src/logo-engine.ts",
-          "line": 67
+          "line": 117
         },
         {
           "name": "buildLogoSvgStr",
           "cog": 8,
           "cc": 19,
           "file": "src/logo-engine.ts",
-          "line": 139
+          "line": 190
         },
         {
           "name": "renderTextSlot",
           "cog": 7,
           "cc": 9,
           "file": "src/text-render.ts",
-          "line": 58
+          "line": 99
         },
         {
           "name": "ColorSwatch",
@@ -66,16 +69,149 @@
           "cc": 10,
           "file": "src/ui-parts.tsx",
           "line": 80
+        },
+        {
+          "name": "packIco",
+          "cog": 5,
+          "cc": 4,
+          "file": "src/build-ico.ts",
+          "line": 2
+        },
+        {
+          "name": "hueFrom",
+          "cog": 5,
+          "cc": 4,
+          "file": "src/color-utils.ts",
+          "line": 8
+        },
+        {
+          "name": "f",
+          "cog": 5,
+          "cc": 6,
+          "file": "src/color-utils.ts",
+          "line": 31
+        },
+        {
+          "name": "buildDefsBlock",
+          "cog": 5,
+          "cc": 6,
+          "file": "src/logo-engine.ts",
+          "line": 157
+        },
+        {
+          "name": "parseSvg",
+          "cog": 5,
+          "cc": 6,
+          "file": "src/symbols/parse.ts",
+          "line": 134
         }
       ]
+    },
+    "fnLength": {
+      "avg": 8.5,
+      "p90": 20,
+      "max": 151,
+      "over40": 4,
+      "over80": 1,
+      "top10avg": 60.7,
+      "countAll": 219,
+      "count5": 96,
+      "count10": 55,
+      "worst": [
+        {
+          "name": "App",
+          "lines": 151,
+          "cog": 18,
+          "file": "src/App.tsx",
+          "line": 32
+        },
+        {
+          "name": "DownloadSection",
+          "lines": 120,
+          "cog": 1,
+          "file": "src/builder-download-section.tsx",
+          "line": 9
+        },
+        {
+          "name": "SlotPickerSection",
+          "lines": 51,
+          "cog": 4,
+          "file": "src/builder-slot-section.tsx",
+          "line": 6
+        },
+        {
+          "name": "(anonymous)",
+          "lines": 47,
+          "cog": 1,
+          "file": "src/home-view.tsx",
+          "line": 58
+        },
+        {
+          "name": "buildLogoSvgStr",
+          "lines": 44,
+          "cog": 8,
+          "file": "src/logo-engine.ts",
+          "line": 190
+        },
+        {
+          "name": "LogoGuides",
+          "lines": 41,
+          "cog": 2,
+          "file": "src/logo-guides.tsx",
+          "line": 24
+        },
+        {
+          "name": "handleDownloadPack",
+          "lines": 41,
+          "cog": 4,
+          "file": "src/use-logo-actions.ts",
+          "line": 115
+        },
+        {
+          "name": "OutputFormatsSection",
+          "lines": 40,
+          "cog": 0,
+          "file": "src/home-sections.tsx",
+          "line": 38
+        },
+        {
+          "name": "HomeView",
+          "lines": 40,
+          "cog": 0,
+          "file": "src/home-view.tsx",
+          "line": 10
+        },
+        {
+          "name": "WhySection",
+          "lines": 32,
+          "cog": 0,
+          "file": "src/home-sections.tsx",
+          "line": 5
+        }
+      ]
+    },
+    "scoreInputs": {
+      "over15Pct": 0.46,
+      "over25Pct": 0,
+      "p90Cog": 3,
+      "maxCog": 18,
+      "dupPct": 0,
+      "longFileSeverityPct": 0,
+      "avgFileLines": 86,
+      "fnOver40Pct": 1.83,
+      "fnP90": 20,
+      "fnMax": 151,
+      "fnTop10": 60.7,
+      "cogTop10": 7.3
     },
     "duplication": {
       "percent": 0,
       "dupTokens": 0,
-      "totalTokens": 15404,
+      "totalTokens": 16736,
       "blocks": 0,
       "worstFiles": [],
-      "worstBlocks": []
+      "worstBlocks": [],
+      "variantSkipped": 0
     },
     "io": {
       "readers": 0,
@@ -84,35 +220,127 @@
       "uncachedLoopSites": 0,
       "worst": []
     },
+    "textbook": {
+      "awaitInForEach": {
+        "count": 0,
+        "worst": []
+      },
+      "spreadAccumulator": {
+        "count": 0,
+        "worst": []
+      },
+      "regexInLoop": {
+        "count": 1,
+        "worst": [
+          {
+            "file": "src/symbols/parse.ts",
+            "line": 128
+          }
+        ]
+      },
+      "floatingPromise": {
+        "count": 0,
+        "worst": []
+      },
+      "loopInvariantIndex": {
+        "count": 0,
+        "worst": []
+      },
+      "sharedRefFill": {
+        "count": 0,
+        "worst": []
+      },
+      "numericSortNoComparator": {
+        "count": 0,
+        "worst": []
+      },
+      "emptyCatch": {
+        "count": 1,
+        "worst": [
+          {
+            "file": "src/canvas-render.ts",
+            "line": 33
+          }
+        ]
+      },
+      "statefulRegex": {
+        "count": 0,
+        "worst": []
+      },
+      "forInArray": {
+        "count": 0,
+        "worst": []
+      }
+    },
+    "typeSafety": {
+      "tsFiles": 30,
+      "totalAnnots": 806,
+      "anyType": {
+        "count": 0,
+        "pct": 0,
+        "worst": []
+      },
+      "asAny": {
+        "count": 0,
+        "worst": []
+      },
+      "nonNull": {
+        "count": 1,
+        "worst": [
+          {
+            "file": "src/main.tsx",
+            "line": 7,
+            "text": "document.getElementById(\"root\")!"
+          }
+        ]
+      },
+      "tsIgnore": {
+        "count": 0,
+        "worst": []
+      }
+    },
+    "testDensity": {
+      "files": 0,
+      "lines": 0,
+      "percent": null
+    },
+    "quadratic": {
+      "sites": 0,
+      "candidates": 0,
+      "zones": {},
+      "worst": [],
+      "candidateList": [],
+      "files": []
+    },
     "renderGates": {
       "hostages": 0,
       "worst": []
     },
     "cc": {
-      "functions": 190,
+      "functions": 219,
       "avg": 2.1,
       "p90": 4,
-      "max": 26,
+      "max": 30,
       "over10": 4,
       "over20": 1,
       "worst": [
         {
           "name": "App",
-          "cc": 26,
+          "cc": 30,
           "file": "src/App.tsx",
-          "line": 31
+          "line": 32
         },
         {
           "name": "buildLogoSvgStr",
           "cc": 19,
           "file": "src/logo-engine.ts",
-          "line": 139
+          "line": 190
         },
         {
           "name": "renderSymbolSlot",
           "cc": 13,
           "file": "src/logo-engine.ts",
-          "line": 67
+          "line": 117
         },
         {
           "name": "resolveStyle",
@@ -128,21 +356,21 @@
         }
       ]
     },
-    "branchDensity": 9.2,
-    "branches": 227,
-    "functions": 222,
-    "avgFileLines": 85,
-    "longFiles": 1,
+    "branchDensity": 9.6,
+    "branches": 248,
+    "functions": 252,
+    "avgFileLines": 86,
+    "longFiles": 0,
     "maxFile": {
       "path": "src/App.tsx",
-      "lines": 208
+      "lines": 226
     }
   },
   "kit": {
     "features": [
       {
         "name": "Watermark",
-        "loc": 190,
+        "loc": 205,
         "category": "component"
       },
       {
@@ -152,7 +380,7 @@
       },
       {
         "name": "AppShell",
-        "loc": 78,
+        "loc": 76,
         "category": "component"
       },
       {
@@ -176,24 +404,24 @@
         "category": "component"
       }
     ],
-    "savedLines": 536,
+    "savedLines": 549,
     "savedKB": 21,
     "savedA4": 7,
     "savedPercent": 18,
     "usage": {
       "component": {
         "used": 11,
-        "total": 60,
-        "percent": 18
+        "total": 64,
+        "percent": 17
       },
       "hook": {
         "used": 1,
-        "total": 13,
-        "percent": 8
+        "total": 14,
+        "percent": 7
       },
       "util": {
         "used": 0,
-        "total": 26,
+        "total": 48,
         "percent": 0
       }
     }
